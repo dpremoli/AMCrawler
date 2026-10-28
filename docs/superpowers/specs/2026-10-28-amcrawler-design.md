@@ -59,7 +59,7 @@ missing from the catalogue still appears, with no Areas/Countries.
 
 ### 2.3 Country folding
 
-The catalogue uses 11 pseudo-codes for sub-national places. Fold them before
+The catalogue uses 14 pseudo-codes for sub-national places. Fold them before
 anything else:
 
 | Code | Name | Folds to |
@@ -71,6 +71,12 @@ anything else:
 | TB | Tibet | CN |
 | AK | Alaska | US |
 | PX | Patagonia | AR **and** CL |
+| IC | Isole Canarie | ES |
+| SU | Sud Italia | IT |
+| AN | Antille Olandesi | CW **and** BQ |
+
+`XK` (Kosovo) is a real user-assigned code: it is kept as-is and displayed as
+"Kosovo" (pycountry does not know it).
 
 After folding, deduplicate. Any other code that is not a valid ISO 3166-1
 alpha-2 is logged once per crawl and kept as-is (filterable, not on the map).

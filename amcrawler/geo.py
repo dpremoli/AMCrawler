@@ -20,7 +20,13 @@ PSEUDO_CODES: dict[str, tuple[str, ...]] = {
     "TB": ("CN",),
     "AK": ("US",),
     "PX": ("AR", "CL"),
+    "IC": ("ES",),
+    "SU": ("IT",),
+    "AN": ("CW", "BQ"),
 }
+
+# Real-world codes pycountry does not know.
+NAME_OVERRIDES_IT: dict[str, str] = {"XK": "Kosovo"}
 
 
 def fold_countries(codes: Iterable[str]) -> tuple[str, ...]:
@@ -51,6 +57,8 @@ def _italian():
 
 def country_name_it(alpha2: str) -> str:
     """Italian country name; falls back to English name, then the code."""
+    if alpha2 in NAME_OVERRIDES_IT:
+        return NAME_OVERRIDES_IT[alpha2]
     country = pycountry.countries.get(alpha_2=alpha2)
     if not country:
         return alpha2

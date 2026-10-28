@@ -8,6 +8,10 @@ def test_fold_pseudo_codes():
     assert fold_countries(["ZI", "TB", "AK", "LE", "MI"]) == ("GB", "CN", "US", "ES", "PT")
 
 
+def test_fold_extra_pseudo_codes():
+    assert fold_countries(["IC", "SU", "AN"]) == ("ES", "IT", "CW", "BQ")
+
+
 def test_iso_numeric():
     assert iso_numeric("IT") == "380"
     assert iso_numeric("AF") == "004"
@@ -17,6 +21,7 @@ def test_iso_numeric():
 def test_country_name_it():
     assert country_name_it("JP") == "Giappone"
     assert country_name_it("ZZ") == "ZZ"
+    assert country_name_it("XK") == "Kosovo"
 
 
 def test_load_config_defaults():

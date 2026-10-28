@@ -1,0 +1,3 @@
+# New Entries are judged by applying today's Digest Filter to both snapshots
+
+A New Entry is an Uncovered Departure that matches the current Digest Filter in the latest snapshot but did not match that same filter in the snapshot taken at the previous Digest. We store the full Uncovered list per snapshot (not just "already notified" IDs) so the comparison can be re-run under whatever the filter is today. Alternatives rejected: diffing filtered lists as they were sent (editing the filter would flood the next Digest with old Departures), and diffing only the unfiltered Uncovered list (a Departure crossing the minimum-Participants threshold, or drifting into the departure window, would never be reported).

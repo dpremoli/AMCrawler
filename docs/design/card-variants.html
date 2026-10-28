@@ -1,0 +1,419 @@
+<title>AMCrawler card variants</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: three phone-width columns side by side, stacked on a phone; tokens copied from amcrawler/static/app.css */
+:root {
+  --bg: #f5f6f8; --surface: #fff; --surface-2: #eef1f4; --text: #1b1f24; --muted: #5b6570;
+  --line: #d8dde3; --accent: #0b5cad; --accent-text: #fff; --new: #c2410c;
+  --soon: #9a5b00; --soon-bg: #fff3d6; --fill: #2f7d4f; --fill-bg: #dfe6ec; --one: #d9640f;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #101317; --surface: #1a1f25; --surface-2: #222830; --text: #e8ebef; --muted: #9aa5b1;
+  --line: #2d343c; --accent: #5aa2f0; --accent-text: #0b1118; --new: #fb923c;
+  --soon: #f5c060; --soon-bg: #3a2e14; --fill: #5cc489; --fill-bg: #2a3139; --one: #ff9a3d; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #101317; --surface: #1a1f25; --surface-2: #222830; --text: #e8ebef; --muted: #9aa5b1;
+  --line: #2d343c; --accent: #5aa2f0; --accent-text: #0b1118; --new: #fb923c;
+  --soon: #f5c060; --soon-bg: #3a2e14; --fill: #5cc489; --fill-bg: #2a3139; --one: #ff9a3d; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--text); font: 16px/1.45 var(--font);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px 48px;
+}
+.intro { max-width: 70ch; margin: 0 auto 24px; }
+.intro h1 { font-size: 1.5rem; margin: 0 0 6px; text-wrap: balance; }
+.intro p { margin: 0 0 6px; color: var(--muted); }
+.intro .now { font-variant-numeric: tabular-nums; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 28px; max-width: 1200px; margin: 0 auto; }
+.col { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.col > h2 { font-size: 1.05rem; margin: 0; }
+.col > .why { margin: 0 0 6px; color: var(--muted); font-size: .9rem; }
+.tag-letter { display: inline-flex; align-items: center; justify-content: center; width: 1.6rem; height: 1.6rem;
+  border-radius: 50%; background: var(--accent); color: var(--accent-text); font-weight: 700; font-size: .85rem; margin-right: 6px; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 14px;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--text);
+  font: inherit; font-size: .95rem; text-decoration: none; cursor: pointer;
+}
+.btn.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.btn:focus-visible, .notes:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.badge { font-size: .7rem; font-weight: 700; letter-spacing: .06em; color: var(--new); border: 1px solid var(--new);
+  border-radius: 6px; padding: 1px 6px; white-space: nowrap; }
+.soon { display: inline-flex; align-items: center; gap: 4px; font-size: .8rem; font-weight: 600; color: var(--soon);
+  background: var(--soon-bg); border-radius: 6px; padding: 1px 7px; white-space: nowrap; }
+.code { font-variant-numeric: tabular-nums; color: var(--muted); font-size: .8rem; }
+.meter { height: 6px; border-radius: 3px; background: var(--fill-bg); overflow: hidden; }
+.meter > span { display: block; height: 100%; background: var(--fill); border-radius: 3px; }
+.notes { margin: 0; font-size: .88rem; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; }
+.notes[aria-expanded="true"] { -webkit-line-clamp: unset; display: block; }
+.flag { font-size: 1.05em; }
+
+/* A: Pulita */
+.a { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: grid; gap: 8px; }
+.a .top { display: flex; align-items: flex-start; gap: 8px; }
+.a h3 { margin: 0; font-size: 1.1rem; flex: 1; min-width: 0; }
+.a .when { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: .92rem; font-variant-numeric: tabular-nums; }
+.a .fillrow { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; font-size: .85rem; color: var(--muted); }
+.a .fillrow .meter { grid-column: 1 / -1; }
+.a .where { font-size: .9rem; color: var(--muted); }
+.a .foot { display: flex; align-items: center; gap: 8px; }
+.a .foot .code { flex: 1; }
+
+/* B: Data in evidenza */
+.b { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px;
+  display: grid; grid-template-columns: 58px 1fr; gap: 10px 12px; }
+.b .date { grid-row: span 2; align-self: stretch; display: grid; justify-items: center; align-content: center; gap: 2px; padding: 8px 0;
+  border-radius: 10px; background: var(--surface-2); text-align: center; line-height: 1.1; }
+.b .date .m { font-size: .7rem; font-weight: 700; letter-spacing: .08em; color: var(--muted); }
+.b .date .d { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.b .date .w { font-size: .72rem; color: var(--muted); }
+.b .body { min-width: 0; display: grid; gap: 4px; }
+.b .head { display: flex; gap: 8px; align-items: flex-start; }
+.b h3 { margin: 0; font-size: 1.05rem; flex: 1; min-width: 0; }
+.b .where { font-size: .88rem; color: var(--muted); }
+.b .stats { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: .85rem; font-variant-numeric: tabular-nums; }
+.b .stats b { font-weight: 650; }
+.b .wide { grid-column: 1 / -1; display: grid; gap: 8px; }
+.ticks { display: flex; gap: 2px; }
+.ticks i { flex: 1; height: 10px; border-radius: 2px; background: var(--fill-bg); }
+.ticks i:nth-child(5n):not(:last-child) { margin-right: 3px; }
+.ticks i.on { background: var(--fill); }
+.ticks.one i.on { background: var(--one); }
+.b .foot { display: flex; align-items: center; gap: 8px; }
+.b .foot .code { flex: 1; }
+
+/* C: Biglietto */
+.c { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.c .band { display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: var(--surface-2);
+  font-size: .78rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.c .band .code { flex: 1; text-align: right; letter-spacing: 0; text-transform: none; font-weight: 400; }
+.c .main { padding: 12px 14px; display: grid; gap: 10px; }
+.c h3 { margin: 0; font-size: 1.2rem; text-wrap: balance; }
+.c .route { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; }
+.c .route .end { text-align: right; }
+.c .route .dd { font-size: 1.15rem; font-weight: 700; }
+.c .route .ww { font-size: .75rem; color: var(--muted); }
+.c .route .line { position: relative; text-align: center; font-size: .78rem; color: var(--muted); }
+.c .route .line::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 2px dashed var(--line); }
+.c .route .line span { position: relative; background: var(--surface); padding: 0 6px; }
+.c .perf { height: 0; border-top: 2px dashed var(--line); margin: 0 14px; position: relative; }
+.c .stats { display: grid; grid-template-columns: repeat(3, 1fr); padding: 10px 14px; text-align: center; }
+.c .stats div { display: grid; gap: 2px; }
+.c .stats div + div { border-left: 1px solid var(--line); }
+.c .stats .v { font-size: 1.1rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.c .stats .l { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.c .stats .v.hot { color: var(--soon); }
+.c .where { padding: 0 14px 10px; font-size: .9rem; color: var(--muted); }
+.c .notes { padding: 0 14px; margin-bottom: 10px; }
+.c .foot { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 0 14px 14px; }
+
+/* B end-date options */
+.optset { max-width: 1200px; margin: 0 auto 40px; }
+.optset > h2 { font-size: 1.2rem; margin: 0 0 4px; }
+.optset > p { margin: 0 0 16px; color: var(--muted); }
+.b1 { grid-template-columns: auto 1fr; }
+.b1 .dates { grid-row: span 2; align-self: stretch; display: flex; align-items: stretch; gap: 3px; }
+.b1 .dates .date { width: 50px; }
+.b1 .arrow { align-self: center; color: var(--muted); font-size: .85rem; }
+.b2 .date .d { font-size: 1.45rem; }
+.b2 .date .sep { width: 2px; height: 12px; border-radius: 1px; background: var(--muted); opacity: .5; margin: 1px 0; }
+.b3 { grid-template-columns: 1fr; }
+.b3 .strip { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px;
+  background: var(--surface-2); border-radius: 10px; padding: 8px 12px; font-variant-numeric: tabular-nums; }
+.b3 .strip .end { text-align: right; }
+.b3 .strip .dd { font-size: 1.3rem; font-weight: 700; line-height: 1.1; }
+.b3 .strip .ww { font-size: .7rem; font-weight: 700; letter-spacing: .08em; color: var(--muted); }
+.b3 .strip .line { position: relative; text-align: center; font-size: .78rem; color: var(--muted); }
+.b3 .strip .line::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 2px dashed var(--line); }
+.b3 .strip .line span { position: relative; background: var(--surface-2); padding: 0 6px; }
+
+.legend { max-width: 1200px; margin: 32px auto 0; display: grid; gap: 6px; font-size: .9rem; color: var(--muted); }
+.legend h2 { font-size: 1rem; color: var(--text); margin: 0 0 4px; }
+.legend ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+</style>
+
+<header class="intro">
+  <h1>Scheda partenza: tre proposte</h1>
+  <p>Three redesigns of the Departure card, using the same Departures in each. Everything shown comes from data the app already stores; the weekday, countdown and free seats are worked out from it.</p>
+  <p class="now">Example date: today is 28 Oct 2026. "Parte presto" appears when a Departure starts within 21 days.</p>
+</header>
+
+<section class="optset" aria-labelledby="tend">
+  <h2 id="tend">Card B: three ways to make the return date prominent</h2>
+  <p>Each option shows a trip within one month and one over New Year (28 Dec to 6 Jan), where the month and year change.</p>
+  <div class="cols">
+
+    <section class="col" aria-labelledby="tb1">
+      <h2 id="tb1"><span class="tag-letter">B1</span>Due tessere</h2>
+      <p class="why">Start and end each get their own tile, side by side. Same weight for both dates; the name gets a little less width.</p>
+
+      <article class="b b1">
+        <div class="dates">
+          <div class="date"><span class="m">NOV</span><span class="d">13</span><span class="w">ven</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="date"><span class="m">NOV</span><span class="d">29</span><span class="w">dom</span></div>
+        </div>
+        <div class="body">
+          <div class="head"><h3>Perù Discovery</h3></div>
+          <div class="where">Perù · Discovery</div>
+        </div>
+        <div class="body" style="grid-column:2">
+          <div class="stats"><span><b>17</b> giorni</span><span><b>6/15</b> iscritti</span><span class="soon">tra 16 gg</span></div>
+        </div>
+        <div class="wide">
+          <div class="ticks" role="img" aria-label="6 iscritti su 15 posti"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="foot"><span class="code">2026-0187</span><a class="btn primary" href="#">Vedi</a><button class="btn" type="button">Nascondi</button></div>
+        </div>
+      </article>
+
+      <article class="b b1">
+        <div class="dates">
+          <div class="date"><span class="m">DIC</span><span class="d">28</span><span class="w">lun</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="date"><span class="m">GEN</span><span class="d">6</span><span class="w">mer</span></div>
+        </div>
+        <div class="body">
+          <div class="head"><h3>Marocco, Capodanno nel deserto</h3><span class="badge">NUOVA</span></div>
+          <div class="where">Marocco · Adventure</div>
+        </div>
+        <div class="body" style="grid-column:2">
+          <div class="stats"><span><b>10</b> giorni</span><span><b>1/14</b> iscritto</span><span style="color:var(--muted)">tra 61 gg</span></div>
+        </div>
+        <div class="wide">
+          <div class="ticks one" role="img" aria-label="1 iscritto su 14 posti"><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="foot"><span class="code">2026-0240</span><a class="btn primary" href="#">Vedi</a><button class="btn" type="button">Nascondi</button></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="col" aria-labelledby="tb2">
+      <h2 id="tb2"><span class="tag-letter">B2</span>Tessera doppia</h2>
+      <p class="why">One taller tile holds both days, start on top and end below. Keeps the name its full width; the month shows twice when it changes.</p>
+
+      <article class="b b2">
+        <div class="date" aria-label="dal 13 al 29 novembre"><span class="m">NOV</span><span class="d">13</span><span class="sep"></span><span class="d">29</span><span class="w">ven–dom</span></div>
+        <div class="body">
+          <div class="head"><h3>Perù Discovery</h3></div>
+          <div class="where">Perù · Discovery</div>
+        </div>
+        <div class="body" style="grid-column:2">
+          <div class="stats"><span><b>17</b> giorni</span><span><b>6/15</b> iscritti</span><span class="soon">tra 16 gg</span></div>
+        </div>
+        <div class="wide">
+          <div class="ticks" role="img" aria-label="6 iscritti su 15 posti"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="foot"><span class="code">2026-0187</span><a class="btn primary" href="#">Vedi</a><button class="btn" type="button">Nascondi</button></div>
+        </div>
+      </article>
+
+      <article class="b b2">
+        <div class="date" aria-label="dal 28 dicembre al 6 gennaio"><span class="m">DIC</span><span class="d">28</span><span class="sep"></span><span class="d">6</span><span class="m">GEN</span></div>
+        <div class="body">
+          <div class="head"><h3>Marocco, Capodanno nel deserto</h3><span class="badge">NUOVA</span></div>
+          <div class="where">Marocco · Adventure</div>
+        </div>
+        <div class="body" style="grid-column:2">
+          <div class="stats"><span><b>10</b> giorni</span><span><b>1/14</b> iscritto</span><span style="color:var(--muted)">tra 61 gg</span></div>
+        </div>
+        <div class="wide">
+          <div class="ticks one" role="img" aria-label="1 iscritto su 14 posti"><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="foot"><span class="code">2026-0240</span><a class="btn primary" href="#">Vedi</a><button class="btn" type="button">Nascondi</button></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="col" aria-labelledby="tb3">
+      <h2 id="tb3"><span class="tag-letter">B3</span>Striscia date</h2>
+      <p class="why">The tile becomes a full-width strip under the name: start, duration, end. Largest dates, weekday on both, one row taller.</p>
+
+      <article class="b b3">
+        <div class="body">
+          <div class="head"><h3>Perù Discovery</h3></div>
+          <div class="where">Perù · Discovery</div>
+        </div>
+        <div class="strip">
+          <div><div class="ww">VEN</div><div class="dd">13 nov</div></div>
+          <div class="line"><span>17 giorni</span></div>
+          <div class="end"><div class="ww">DOM</div><div class="dd">29 nov</div></div>
+        </div>
+        <div class="stats"><span><b>6/15</b> iscritti</span><span class="soon">Parte tra 16 giorni</span></div>
+        <div class="ticks" role="img" aria-label="6 iscritti su 15 posti"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="foot"><span class="code">2026-0187</span><a class="btn primary" href="#">Vedi</a><button class="btn" type="button">Nascondi</button></div>
+      </article>
+
+      <article class="b b3">
+        <div class="body">
+          <div class="head"><h3>Marocco, Capodanno nel deserto</h3><span class="badge">NUOVA</span></div>
+          <div class="where">Marocco · Adventure</div>
+        </div>
+        <div class="strip">
+          <div><div class="ww">LUN</div><div class="dd">28 dic</div></div>
+          <div class="line"><span>10 giorni</span></div>
+          <div class="end"><div class="ww">MER</div><div class="dd">6 gen</div></div>
+        </div>
+        <div class="stats"><span><b>1/14</b> iscritto</span><span style="color:var(--muted)">tra 61 giorni</span></div>
+        <div class="ticks one" role="img" aria-label="1 iscritto su 14 posti"><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="foot"><span class="code">2026-0240</span><a class="btn primary" href="#">Vedi</a><button class="btn" type="button">Nascondi</button></div>
+      </article>
+    </section>
+
+  </div>
+</section>
+
+<h2 style="max-width:1200px;margin:0 auto 12px;font-size:1.2rem">Earlier proposals</h2>
+<main class="cols">
+
+  <!-- A -->
+  <section class="col" aria-labelledby="ta">
+    <h2 id="ta"><span class="tag-letter">A</span>Pulita</h2>
+    <p class="why">Same shape as today, clearer hierarchy. Adds countdown, fill bar, free seats, Area and the Departure code.</p>
+
+    <article class="a">
+      <div class="top"><h3>Perù Discovery</h3></div>
+      <div class="when"><span>13 – 29 nov · 17 giorni</span><span class="soon">Parte tra 16 giorni</span></div>
+      <div class="fillrow"><span>6/15 iscritti</span><span>9 posti liberi</span><div class="meter"><span style="width:40%"></span></div></div>
+      <div class="where">Perù · America Latina · Discovery</div>
+      <div class="foot"><span class="code">2026-0187</span><a class="btn primary" href="#">Vedi viaggio</a><button class="btn" type="button">Nascondi</button></div>
+    </article>
+
+    <article class="a">
+      <div class="top"><h3>Giordania e Wadi Rum</h3><span class="badge">NUOVA</span></div>
+      <div class="when"><span>5 – 13 dic · 9 giorni</span><span style="color:var(--muted);font-size:.85rem">tra 38 giorni</span></div>
+      <div class="fillrow"><span>2/12 iscritti</span><span>10 posti liberi</span><div class="meter"><span style="width:17%"></span></div></div>
+      <div class="where">Giordania · Medio Oriente · Adventure</div>
+      <p class="notes" tabindex="0" role="button" aria-expanded="false">Partenza da Roma Fiumicino. Possibile estensione Petra by night su richiesta del gruppo; quota voli non inclusa.</p>
+      <div class="foot"><span class="code">2026-0212</span><a class="btn primary" href="#">Vedi viaggio</a><button class="btn" type="button">Nascondi</button></div>
+    </article>
+
+    <article class="a">
+      <div class="top"><h3>Patagonia Trek</h3></div>
+      <div class="when"><span>3 – 21 gen · 19 giorni</span><span style="color:var(--muted);font-size:.85rem">tra 67 giorni</span></div>
+      <div class="fillrow"><span>11/14 iscritti</span><span>3 posti liberi</span><div class="meter"><span style="width:79%"></span></div></div>
+      <div class="where">Argentina, Cile · America Latina · Trekking</div>
+      <div class="foot"><span class="code">2027-0009</span><a class="btn primary" href="#">Vedi viaggio</a><button class="btn" type="button">Nascondi</button></div>
+    </article>
+  </section>
+
+  <!-- B -->
+  <section class="col" aria-labelledby="tb">
+    <h2 id="tb"><span class="tag-letter">B</span>Data in evidenza</h2>
+    <p class="why">Chosen. Date tile centred; one block per seat, grouped in fives. Orange with a single Participant, green from two upwards.</p>
+
+    <article class="b">
+      <div class="date"><span class="m">NOV</span><span class="d">13</span><span class="w">ven</span></div>
+      <div class="body">
+        <div class="head"><h3>Perù Discovery</h3></div>
+        <div class="where">Perù · Discovery</div>
+      </div>
+      <div class="body" style="grid-column:2">
+        <div class="stats"><span><b>17</b> giorni</span><span><b>6/15</b> iscritti</span><span class="soon">tra 16 gg</span></div>
+      </div>
+      <div class="wide">
+        <div class="ticks" role="img" aria-label="6 iscritti su 15 posti"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="foot"><span class="code">2026-0187 · fino al 29 nov</span><a class="btn primary" href="#">Vedi</a><button class="btn" type="button">Nascondi</button></div>
+      </div>
+    </article>
+
+    <article class="b">
+      <div class="date"><span class="m">DIC</span><span class="d">5</span><span class="w">sab</span></div>
+      <div class="body">
+        <div class="head"><h3>Giordania e Wadi Rum</h3><span class="badge">NUOVA</span></div>
+        <div class="where">Giordania · Adventure</div>
+      </div>
+      <div class="body" style="grid-column:2">
+        <div class="stats"><span><b>9</b> giorni</span><span><b>1/12</b> iscritto</span><span style="color:var(--muted)">tra 38 gg</span></div>
+      </div>
+      <div class="wide">
+        <div class="ticks one" role="img" aria-label="1 iscritto su 12 posti"><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <p class="notes" tabindex="0" role="button" aria-expanded="false">Partenza da Roma Fiumicino. Possibile estensione Petra by night su richiesta del gruppo; quota voli non inclusa.</p>
+        <div class="foot"><span class="code">2026-0212 · fino al 13 dic</span><a class="btn primary" href="#">Vedi</a><button class="btn" type="button">Nascondi</button></div>
+      </div>
+    </article>
+
+    <article class="b">
+      <div class="date"><span class="m">GEN</span><span class="d">3</span><span class="w">dom</span></div>
+      <div class="body">
+        <div class="head"><h3>Patagonia Trek</h3></div>
+        <div class="where">Argentina, Cile · Trekking</div>
+      </div>
+      <div class="body" style="grid-column:2">
+        <div class="stats"><span><b>19</b> giorni</span><span><b>11/14</b> iscritti</span><span style="color:var(--muted)">tra 67 gg</span></div>
+      </div>
+      <div class="wide">
+        <div class="ticks" role="img" aria-label="11 iscritti su 14 posti"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i></div>
+        <div class="foot"><span class="code">2027-0009 · fino al 21 gen</span><a class="btn primary" href="#">Vedi</a><button class="btn" type="button">Nascondi</button></div>
+      </div>
+    </article>
+  </section>
+
+  <!-- C -->
+  <section class="col" aria-labelledby="tc">
+    <h2 id="tc"><span class="tag-letter">C</span>Biglietto</h2>
+    <p class="why">A boarding-pass layout: start and end dates as the route, three key numbers in a row. Most informative, but takes the most space.</p>
+
+    <article class="c">
+      <div class="band"><span>Discovery</span><span class="code">2026-0187</span></div>
+      <div class="main">
+        <h3>Perù Discovery</h3>
+        <div class="route">
+          <div><div class="dd">13 nov</div><div class="ww">venerdì</div></div>
+          <div class="line"><span>17 giorni</span></div>
+          <div class="end"><div class="dd">29 nov</div><div class="ww">domenica</div></div>
+        </div>
+      </div>
+      <div class="perf"></div>
+      <div class="stats">
+        <div><span class="v">6/15</span><span class="l">iscritti</span></div>
+        <div><span class="v">9</span><span class="l">posti</span></div>
+        <div><span class="v hot">16 gg</span><span class="l">alla partenza</span></div>
+      </div>
+      <div class="where">Perù · America Latina</div>
+      <div class="foot"><a class="btn primary" href="#">Vedi viaggio</a><button class="btn" type="button">Nascondi</button></div>
+    </article>
+
+    <article class="c">
+      <div class="band"><span>Adventure</span><span class="badge">NUOVA</span><span class="code">2026-0212</span></div>
+      <div class="main">
+        <h3>Giordania e Wadi Rum</h3>
+        <div class="route">
+          <div><div class="dd">5 dic</div><div class="ww">sabato</div></div>
+          <div class="line"><span>9 giorni</span></div>
+          <div class="end"><div class="dd">13 dic</div><div class="ww">domenica</div></div>
+        </div>
+      </div>
+      <div class="perf"></div>
+      <div class="stats">
+        <div><span class="v">2/12</span><span class="l">iscritti</span></div>
+        <div><span class="v">10</span><span class="l">posti</span></div>
+        <div><span class="v">38 gg</span><span class="l">alla partenza</span></div>
+      </div>
+      <div class="where">Giordania · Medio Oriente</div>
+      <p class="notes" tabindex="0" role="button" aria-expanded="false">Partenza da Roma Fiumicino. Possibile estensione Petra by night su richiesta del gruppo; quota voli non inclusa.</p>
+      <div class="foot"><a class="btn primary" href="#">Vedi viaggio</a><button class="btn" type="button">Nascondi</button></div>
+    </article>
+  </section>
+</main>
+
+<section class="legend" aria-labelledby="tl">
+  <h2 id="tl">What each piece means</h2>
+  <ul>
+    <li><b>Countdown</b> ("tra 16 giorni"): days from today to the start date. Highlighted in amber, with text, when under 21 days.</li>
+    <li><b>Seat blocks</b> (card B): one block per seat, filled for each Participant, with a small gap every five. Orange when only one person has signed up, green from two. The "6/15 iscritti" text says the same in words.</li>
+    <li><b>Code</b> (2026-0187): the Departure code, useful when contacting the office.</li>
+    <li><b>Notes</b>: two lines, tap to expand (unchanged from today).</li>
+  </ul>
+</section>
+
+<script>
+document.querySelectorAll('.notes').forEach(function (n) {
+  function toggle() { n.setAttribute('aria-expanded', n.getAttribute('aria-expanded') === 'true' ? 'false' : 'true'); }
+  n.addEventListener('click', toggle);
+  n.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+});
+document.querySelectorAll('a[href="#"]').forEach(function (a) { a.addEventListener('click', function (e) { e.preventDefault(); }); });
+</script>

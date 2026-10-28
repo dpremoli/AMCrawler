@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}AMCrawler{% if hidden_view %} · Nascoste{% endif %}{% endblock %}
+{% block body %}
+<header class="topbar">
+  <h1>AMCrawler</h1>
+  <div class="seg" role="group" aria-label="Vista">
+    <button type="button" class="seg-btn" data-view="list" aria-pressed="true">Lista</button>
+    <button type="button" class="seg-btn" data-view="map" aria-pressed="false">Mappa</button>
+  </div>
+  <button type="button" class="icon-btn" id="open-filters" aria-haspopup="dialog" aria-controls="filters">Filtri</button>
+  <a class="icon-btn" href="/settings" aria-label="Impostazioni">&#9881;</a>
+</header>
+
+<p class="status{% if status.bad %} status-bad{% endif %}" role="status">{{ status.text }}</p>
+
+<nav class="tabs" aria-label="Elenco">
+  <a href="{{ list_href }}"{% if not hidden_view %} aria-current="page"{% endif %}>Disponibili</a>
+  <a href="{{ hidden_href }}"{% if hidden_view %} aria-current="page"{% endif %}>Nascoste</a>
+</nav>
+
+{% if chips %}
+<ul class="chips" aria-label="Filtri attivi" id="chips">
+  {% for c in chips %}
+  <li><a class="chip" href="{{ c.href }}" aria-label="Rimuovi filtro {{ c.label }}">{{ c.label }} <span aria-hidden="true">&times;</span></a></li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+<main class="layout" data-view="list">
+  <section class="list" aria-label="Partenze" id="list">
+    {% for d in results %}
+    {% include "_card.html" %}
+    {% else %}
+    <p class="empty">{% if hidden_view %}Nessuna partenza nascosta.{% else %}Nessuna partenza corrisponde alla ricerca.{% endif %}</p>
+    {% endfor %}
+  </section>
+  <section class="map-pane" aria-label="Mappa">
+    <div id="map"></div>
+    <p id="map-missing" class="map-missing"></p>
+  </section>
+</main>
+
+<dialog id="filters" class="sheet" aria-labelledby="filters-title">
+  <form method="get" action="/">
+    <h2 id="filters-title">Ricerca</h2>
+    {% if hidden_view %}<input type="hidden" name="nascoste" value="1">{% endif %}
+    <fieldset>
+      <legend>Area</legend>
+      {% for a in areas %}
+      <label class="check"><input type="checkbox" name="area" value="{{ a }}"{% if a in search.areas %} checked{% endif %}> {{ a }}</label>
+      {% endfor %}
+    </fieldset>
+    <fieldset>
+      <legend>Formula</legend>
+      {% for f in formulas %}
+      <label class="check"><input type="checkbox" name="formula" value="{{ f }}"{% if f in search.formulas %} checked{% endif %}> {{ f }}</label>
+      {% endfor %}
+    </fieldset>
+    <label class="field">Paesi
+      <select name="country" multiple size="6">
+        {% for code, name in countries %}
+        <option value="{{ code }}"{% if code in search.countries %} selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <div class="row">
+      <label class="field">Partenza tra (giorni)
+        <input type="number" inputmode="numeric" min="0" name="dfrom" value="{{ search.days_from if search.days_from is not none }}">
+      </label>
+      <label class="field">e (giorni)
+        <input type="number" inputmode="numeric" min="0" name="dto" value="{{ search.days_to if search.days_to is not none }}">
+      </label>
+    </div>
+    <div class="row">
+      <label class="field">Durata min (giorni)
+        <input type="number" inputmode="numeric" min="0" name="dmin" value="{{ search.duration_min if search.duration_min is not none }}">
+      </label>
+      <label class="field">Durata max (giorni)
+        <input type="number" inputmode="numeric" min="0" name="dmax" value="{{ search.duration_max if search.duration_max is not none }}">
+      </label>
+    </div>
+    <label class="field">Iscritti minimi
+      <input type="number" inputmode="numeric" min="1" name="pmin" value="{{ search.min_participants }}">
+    </label>
+    <div class="sheet-actions">
+      <button type="submit" class="btn primary">Cerca</button>
+      <a class="btn" href="{{ '/?nascoste=1' if hidden_view else '/' }}">Azzera</a>
+      <button type="button" class="btn" id="close-filters">Chiudi</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="snackbar" class="snackbar" role="status" aria-live="polite" hidden>
+  <span id="snackbar-text"></span>
+  <button type="button" class="btn" id="snackbar-undo">Annulla</button>
+</div>
+
+<script type="application/json" id="map-data">{{ map_data | tojson }}</script>
+{% endblock %}

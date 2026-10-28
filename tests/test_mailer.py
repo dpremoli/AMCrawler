@@ -85,6 +85,18 @@ def test_render_stale():
     assert "None" not in text2
 
 
+def test_render_stale_singular_hour():
+    subj, text = render_stale(1, None)
+    assert subj == "AMCrawler: nessun aggiornamento da 1 ora"
+    assert "da 1 ora." in text
+
+
+def test_render_stale_without_any_successful_snapshot():
+    subj, text = render_stale(None, "boom")
+    assert subj == "AMCrawler: nessun aggiornamento riuscito finora"
+    assert "None" not in text and "boom" in text
+
+
 def test_smtp_mailer_sends_multipart(monkeypatch):
     calls = {}
 

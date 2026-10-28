@@ -298,7 +298,7 @@ Tap targets ≥ 44 px. System font stack. Light and dark via
 
 - **Top bar:** title, `Lista | Mappa` segmented toggle (phone only), filter button
   opening a bottom sheet with the Search form, settings icon.
-- **Status strip:** "Aggiornato alle 15:00 · 59 partenze · 4 nuove". Red if the
+- **Status strip:** "Aggiornato alle 15:00 · 59 partenze · 4 nuove" ("Aggiornato il 26/10 alle 15:00" when the last OK snapshot is not from today). Red if the
   last crawl failed or the last Digest failed.
 - **Active filter chips** under the bar, each removable.
 - **List:** cards sorted by start date. Card = name, `NUOVA` badge if New,

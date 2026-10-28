@@ -1,4 +1,4 @@
-AMCrawler non riesce ad aggiornare i dati da {{ hours }} ore.
+{% if hours is none %}AMCrawler non è ancora riuscito ad aggiornare i dati.{% else %}AMCrawler non riesce ad aggiornare i dati da {{ hours_label }}.{% endif %}
 {% if last_error %}
 
 Ultimo errore: {{ last_error }}

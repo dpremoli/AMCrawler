@@ -75,6 +75,7 @@ def test_no_snapshot_at_all_is_stale(store):
     mailer = FakeMailer()
     assert run_digest(store, mailer, CFG, DIGEST_NOW) == "stale"
     assert len(mailer.sent) == 1
+    assert mailer.sent[0][1] == "AMCrawler: nessun aggiornamento riuscito finora"
 
 
 def test_smtp_failure_records_failed(store):

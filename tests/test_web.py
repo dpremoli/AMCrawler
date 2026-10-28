@@ -208,3 +208,9 @@ def test_status_strip_shows_date_when_last_ok_is_not_today(app_client, store):
     store.record_snapshot(NOW - timedelta(hours=26), [dep()])
     text = app_client(store=store).get("/").text
     assert "Aggiornato il 27/10 alle 10:00" in text
+
+
+def test_ui_uses_one_term_for_the_digest(client):
+    text = client.get("/").text
+    assert "Usa per il Digest" in text
+    assert "riepilogo" not in text.lower()

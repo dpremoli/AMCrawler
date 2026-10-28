@@ -66,12 +66,9 @@ def _deliver(mailer, render) -> str | None:
 
 
 def _send_stale(store: Store, mailer, now: datetime, last_ok) -> str:
-    if last_ok is None:
-        hours, last_error = 0, "nessuno snapshot riuscito"
-    else:
-        hours = int((now - last_ok.taken_at).total_seconds() // 3600)
-        latest = store.latest_snapshot()
-        last_error = latest.error if latest is not None else None
+    hours = None if last_ok is None else int((now - last_ok.taken_at).total_seconds() // 3600)
+    latest = store.latest_snapshot()
+    last_error = latest.error if latest is not None else None
 
     def render():
         subject, text = render_stale(hours, last_error)

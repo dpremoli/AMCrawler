@@ -8,7 +8,7 @@ from email.message import EmailMessage
 
 from .config import Config
 from .geo import country_name_it
-from .labels import date_range, describe_filter, giorni, short_date
+from .labels import date_range, describe_filter, giorni, plural_it, short_date
 from .models import Departure, Filter
 from .source import itinerary_url
 from .templating import env
@@ -57,9 +57,15 @@ def render_digest(
     return subject, html, text
 
 
-def render_stale(hours: int, last_error: str | None) -> tuple[str, str]:
-    subject = f"AMCrawler: nessun aggiornamento da {hours} ore"
-    text = env.get_template("email/stale.txt").render(hours=hours, last_error=last_error)
+def render_stale(hours: int | None, last_error: str | None) -> tuple[str, str]:
+    """Stale warning; `hours` is None when no snapshot ever succeeded."""
+    if hours is None:
+        subject = "AMCrawler: nessun aggiornamento riuscito finora"
+    else:
+        subject = f"AMCrawler: nessun aggiornamento da {plural_it(hours, 'ora', 'ore')}"
+    text = env.get_template("email/stale.txt").render(
+        hours=hours, hours_label=None if hours is None else plural_it(hours, "ora", "ore"),
+        last_error=last_error)
     return subject, text
 
 

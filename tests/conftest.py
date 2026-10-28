@@ -1,6 +1,7 @@
 """Shared test factories."""
 from __future__ import annotations
 
+import dataclasses
 import json
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -127,11 +128,44 @@ def seeded_store(store):
 
 
 @pytest.fixture
-def client(cfg_dev, seeded_store):
+def cfg_auth(cfg_dev):
+    """cfg_dev with Cloudflare Access enforcement switched on (no verifier configured)."""
+    return dataclasses.replace(cfg_dev, dev_no_auth=False)
+
+
+@pytest.fixture
+def app_client(request, cfg_dev):
+    """Factory: app_client(cfg=None, store=None, mailer=None, **TestClient kwargs).
+
+    Defaults: cfg_dev, the seeded store, a FakeMailer; a frozen clock at NOW.
+    """
     from fastapi.testclient import TestClient
 
     from amcrawler.web import create_app
 
-    app = create_app(cfg_dev, store=seeded_store, mailer=FakeMailer(),
-                     start_scheduler=False, now=lambda: NOW)
-    return TestClient(app)
+    def make(cfg=None, store=None, mailer=None, **client_kw):
+        app = create_app(
+            cfg or cfg_dev,
+            store=store if store is not None else request.getfixturevalue("seeded_store"),
+            mailer=mailer if mailer is not None else FakeMailer(),
+            start_scheduler=False, now=lambda: NOW)
+        return TestClient(app, **client_kw)
+
+    return make
+
+
+@pytest.fixture
+def client(app_client):
+    return app_client()
+
+
+def mock_bases(text=None):
+    """Mock the catalogue download with the sample (or the given) bases.js text."""
+    import httpx
+    import respx
+
+    from amcrawler.source import BASE_URL
+
+    return respx.get(f"{BASE_URL}/data/bases.js").mock(
+        return_value=httpx.Response(200, text=text if text is not None
+                                    else read_text("bases_sample.js")))

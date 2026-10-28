@@ -1,11 +1,8 @@
 import json
 import re
 
-from fastapi.testclient import TestClient
-
 from amcrawler.source import itinerary_url
-from amcrawler.web import create_app
-from tests.conftest import NOW, FakeMailer
+from tests.conftest import NOW, dep, itin
 
 
 def _map_data(html):
@@ -60,10 +57,9 @@ def test_status_strip_red_when_latest_snapshot_failed(client, seeded_store):
     assert "ultimo aggiornamento non riuscito" in text
 
 
-def test_status_strip_without_any_ok_snapshot(cfg_dev, store):
+def test_status_strip_without_any_ok_snapshot(app_client, store):
     store.record_snapshot(NOW, None, "boom")
-    c = TestClient(create_app(cfg_dev, store=store, mailer=FakeMailer(),
-                              start_scheduler=False, now=lambda: NOW))
+    c = app_client(store=store)
     text = c.get("/").text
     assert "Nessun aggiornamento riuscito" in text
     assert "status-bad" in text
@@ -95,9 +91,8 @@ def test_health_ok(client):
     assert body["last_ok_snapshot"].startswith("2026-10-28T10:00")
 
 
-def test_health_without_snapshot(cfg_dev, store):
-    c = TestClient(create_app(cfg_dev, store=store, mailer=FakeMailer(),
-                              start_scheduler=False, now=lambda: NOW))
+def test_health_without_snapshot(app_client, store):
+    c = app_client(store=store)
     assert c.get("/health").json() == {"ok": True, "last_ok_snapshot": None}
     assert c.get("/").status_code == 200
 
@@ -127,25 +122,18 @@ def test_static_and_manifest(client):
     assert client.get("/manifest.webmanifest").json()["name"] == "AMCrawler"
 
 
-def test_auth_enforced_when_not_dev(cfg_dev, seeded_store):
-    import dataclasses
-
-    cfg = dataclasses.replace(cfg_dev, dev_no_auth=False)
-    c = TestClient(create_app(cfg, store=seeded_store, mailer=FakeMailer(),
-                              start_scheduler=False, now=lambda: NOW))
+def test_auth_enforced_when_not_dev(app_client, cfg_auth):
+    c = app_client(cfg_auth)
     assert c.get("/").status_code == 403
     assert c.post("/hide/d1").status_code == 403
     assert c.get("/health").status_code == 200
 
 
-def test_hostile_text_is_escaped(cfg_dev, store):
-    from tests.conftest import dep, itin
-
+def test_hostile_text_is_escaped(app_client, store):
     evil = "</script><img src=x onerror=alert(1)>"
     store.save_catalogue([itin()], NOW)
     store.record_snapshot(NOW, [dep(id="x1", name=evil, notes=evil)])
-    c = TestClient(create_app(cfg_dev, store=store, mailer=FakeMailer(),
-                              start_scheduler=False, now=lambda: NOW))
+    c = app_client(store=store)
     html = c.get("/").text
     assert evil not in html
     assert "&lt;/script&gt;&lt;img src=x onerror=alert(1)&gt;" in html.split(
@@ -155,8 +143,6 @@ def test_hostile_text_is_escaped(cfg_dev, store):
 
 
 def test_search_sheet_lists_only_current_countries(client, seeded_store):
-    from tests.conftest import itin
-
     seeded_store.save_catalogue([
         itin(id="i1", code="0001", countries=("TH",)),
         itin(id="i2", code="0002", formula="Discovery", areas=("Estremo Oriente",),
@@ -177,12 +163,8 @@ def test_filter_groups_are_details_open_when_selected(client):
     assert re.search(r'<details class="group">\s*<summary>Area</summary>', html)
 
 
-def test_head_health_and_index(cfg_dev, seeded_store):
-    import dataclasses
-
-    cfg = dataclasses.replace(cfg_dev, dev_no_auth=False)
-    c = TestClient(create_app(cfg, store=seeded_store, mailer=FakeMailer(),
-                              start_scheduler=False, now=lambda: NOW))
+def test_head_health_and_index(app_client, cfg_auth):
+    c = app_client(cfg_auth)
     assert c.head("/health").status_code == 200
     assert c.head("/").status_code == 403
 
@@ -196,13 +178,10 @@ def test_favicon_link(client):
     assert client.get("/static/icon.svg").status_code == 200
 
 
-def test_one_day_departure_card_and_chip_use_singular(cfg_dev, store):
-    from tests.conftest import dep, itin
-
+def test_one_day_departure_card_and_chip_use_singular(app_client, store):
     store.save_catalogue([itin()], NOW)
     store.record_snapshot(NOW, [dep(id="x1", duration=1)])
-    c = TestClient(create_app(cfg_dev, store=store, mailer=FakeMailer(),
-                              start_scheduler=False, now=lambda: NOW))
+    c = app_client(store=store)
     html = c.get("/?dmax=1").text
     card = html.split('data-id="x1"', 1)[1].split("</article>", 1)[0]
     assert "1 giorno ·" in card and "1 giorni" not in card

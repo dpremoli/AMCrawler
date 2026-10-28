@@ -1,11 +1,11 @@
+import dataclasses
 import re
 
 import pytest
-from fastapi.testclient import TestClient
 
+from amcrawler.mailer import MailerNotConfigured
 from amcrawler.models import Filter
-from amcrawler.web import create_app
-from tests.conftest import NOW, FakeMailer, TODAY  # noqa: F401
+from tests.conftest import NOW, FakeMailer, itin
 
 
 @pytest.fixture
@@ -19,11 +19,10 @@ def hook_calls():
 
 
 @pytest.fixture
-def client(cfg_dev, seeded_store, mailer, hook_calls):
-    app = create_app(cfg_dev, store=seeded_store, mailer=mailer,
-                     start_scheduler=False, now=lambda: NOW)
-    app.state.on_send_time_change = hook_calls.append
-    return TestClient(app, follow_redirects=False)
+def client(app_client, mailer, hook_calls):
+    c = app_client(mailer=mailer, follow_redirects=False)
+    c.app.state.on_send_time_change = hook_calls.append
+    return c
 
 
 def test_settings_page_shows_filter_and_runs(client, seeded_store):
@@ -102,10 +101,8 @@ def test_digest_test_send(client, seeded_store, mailer):
     assert seeded_store.recent_digest_runs(50) == runs_before
 
 
-def test_digest_test_send_failure_is_reported(cfg_dev, seeded_store):
-    app = create_app(cfg_dev, store=seeded_store, mailer=FakeMailer(fail=True),
-                     start_scheduler=False, now=lambda: NOW)
-    c = TestClient(app, follow_redirects=True)
+def test_digest_test_send_failure_is_reported(app_client):
+    c = app_client(mailer=FakeMailer(fail=True), follow_redirects=True)
     r = c.post("/digest/test")
     assert r.status_code == 200
     assert "Invio non riuscito" in r.text
@@ -152,8 +149,6 @@ def test_digest_test_render_error_redirects_not_500(client, monkeypatch):
 
 
 def test_settings_keeps_full_country_list_collapsed(client, seeded_store):
-    from tests.conftest import itin
-
     seeded_store.save_catalogue([itin(id="i9", code="0009", countries=("NO",))], NOW)
     html = client.get("/settings").text
     assert 'value="NO"' in html  # no current Departure there, still selectable
@@ -166,14 +161,10 @@ def test_settings_tools_come_before_filter_form(client):
         assert html.index(marker) < html.index("Filtro del Digest")
 
 
-def test_digest_test_without_recipient_explains(cfg_dev, seeded_store):
-    import dataclasses
-
+def test_digest_test_without_recipient_explains(app_client, cfg_dev):
     mailer = FakeMailer(to="")
     cfg = dataclasses.replace(cfg_dev, digest_to="")
-    c = TestClient(create_app(cfg, store=seeded_store, mailer=mailer,
-                              start_scheduler=False, now=lambda: NOW),
-                   follow_redirects=True)
+    c = app_client(cfg, mailer=mailer, follow_redirects=True)
     r = c.post("/digest/test")
     assert r.status_code == 200 and "DIGEST_TO non impostato" in r.text
     assert mailer.sent == []
@@ -199,8 +190,6 @@ def test_digest_preview_render_error_shows_italian_message(client, monkeypatch):
 
 
 def test_digest_test_smtp_not_configured_is_reported(client, mailer, monkeypatch):
-    from amcrawler.mailer import MailerNotConfigured
-
     def not_configured(*a, **k):
         raise MailerNotConfigured("SMTP non configurato")
 

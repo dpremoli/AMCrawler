@@ -1,15 +1,17 @@
 """FastAPI app: main view, hide/unhide, health, auth wiring."""
 from __future__ import annotations
 
+import logging
+import re
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
-from urllib.parse import urlencode
+from urllib.parse import parse_qsl, urlencode
 from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -17,13 +19,22 @@ from . import digest, filters
 from .auth import AccessVerifier, install_auth
 from .config import Config, load_config
 from .geo import country_name_it, iso_numeric
-from .mailer import SmtpMailer, date_range, truncate_notes
+from .mailer import SmtpMailer, date_range, render_digest, truncate_notes
 from .models import Departure, Filter
 from .source import itinerary_url
 from .store import Store
 
 _PKG = Path(__file__).parent
 _BAD_DIGEST = ("failed", "stale")
+_RUN_LABELS = {
+    "sent": "Inviato",
+    "baseline": "Riferimento iniziale",
+    "empty": "Nessuna novità",
+    "failed": "Invio non riuscito",
+    "stale": "Dati non aggiornati",
+}
+_SEND_TIME = re.compile(r"([01]\d|2[0-3]):[0-5]\d")
+log = logging.getLogger(__name__)
 
 _INT_CHIPS = {
     "dfrom": "Partenza tra almeno {} giorni",
@@ -95,6 +106,7 @@ def create_app(
     app.state.store = store
     app.state.mailer = mailer
     app.state.now = now
+    app.state.on_send_time_change = lambda hhmm: None  # Task 11 reschedules here
 
     verifier = None
     if cfg.cf_team_domain and cfg.cf_aud:
@@ -170,6 +182,7 @@ def create_app(
             "map_data": map_data,
             "list_href": _href(search.to_query(), False),
             "hidden_href": _href(search.to_query(), True),
+            "search_query": urlencode(search.to_query()),
         }
         return templates.TemplateResponse(request, "index.html", ctx)
 
@@ -197,9 +210,89 @@ def create_app(
             "display": "standalone",
             "background_color": "#ffffff",
             "theme_color": "#0b5cad",
-            "icons": [{"src": "/static/icon.svg", "sizes": "any",
-                       "type": "image/svg+xml", "purpose": "any"}],
+            "icons": [
+                {"src": "/static/icon-192.png", "sizes": "192x192",
+                 "type": "image/png", "purpose": "any"},
+                {"src": "/static/icon-512.png", "sizes": "512x512",
+                 "type": "image/png", "purpose": "any"},
+                {"src": "/static/icon.svg", "sizes": "any",
+                 "type": "image/svg+xml", "purpose": "any"},
+            ],
         }, media_type="application/manifest+json")
+
+    def settings_page(request: Request, flt: Filter, send_time: str,
+                      error: str | None = None, status_code: int = 200):
+        itineraries = list(store.itineraries().values())
+        tz = ZoneInfo(cfg.tz)
+        runs = [{"at": r.run_at.astimezone(tz).strftime("%d/%m/%Y %H:%M"),
+                 "label": _RUN_LABELS.get(r.status, r.status),
+                 "count": r.entry_count, "bad": r.status in _BAD_DIGEST}
+                for r in store.recent_digest_runs(10)]
+        ctx = {
+            "search": flt,
+            "send_time": send_time,
+            "error": error,
+            "test_result": request.query_params.get("prova"),
+            "recipient": cfg.digest_to,
+            "runs": runs,
+            "areas": sorted({a for i in itineraries for a in i.areas}),
+            "formulas": sorted({i.formula for i in itineraries if i.formula}),
+            "countries": sorted(
+                ((c, country_name_it(c)) for c in {c for i in itineraries
+                                                    for c in i.countries}),
+                key=lambda t: t[1]),
+        }
+        return templates.TemplateResponse(request, "settings.html", ctx,
+                                          status_code=status_code)
+
+    @app.get("/settings")
+    def settings(request: Request):
+        return settings_page(request, store.digest_filter(), store.send_time())
+
+    @app.post("/settings")
+    async def save_settings(request: Request):
+        form = await request.form()
+        flt = Filter.from_query(form.multi_items())
+        send_time = str(form.get("send_time", "")).strip()
+        if not _SEND_TIME.fullmatch(send_time):
+            return settings_page(request, flt, send_time,
+                                 error="Orario non valido: usa il formato HH:MM.",
+                                 status_code=400)
+        store.set_digest_filter(flt)
+        store.set_send_time(send_time)
+        app.state.on_send_time_change(send_time)
+        return RedirectResponse("/settings", status_code=303)
+
+    @app.post("/settings/from-search")
+    async def settings_from_search(request: Request):
+        form = await request.form()
+        pairs = parse_qsl(str(form.get("query", "")))
+        store.set_digest_filter(Filter.from_query(pairs))
+        return RedirectResponse("/settings", status_code=303)
+
+    def pending_digest() -> tuple[str, str, str, int]:
+        entries = digest.compute_new_entries(store, digest.today_in(cfg.tz, now()))
+        subject, html, text = render_digest(
+            entries, store.digest_filter(), cfg.public_url,
+            digest.today_in(cfg.tz, now()))
+        return subject, html, text, len(entries)
+
+    @app.get("/digest/preview")
+    def digest_preview(request: Request):
+        subject, html, _text, count = pending_digest()
+        if count == 0:
+            return templates.TemplateResponse(request, "preview_empty.html", {})
+        return HTMLResponse(html)
+
+    @app.post("/digest/test")
+    def digest_test():
+        subject, html, text, _count = pending_digest()
+        try:
+            mailer.send(cfg.digest_to, "[PROVA] " + subject, "[PROVA]\n\n" + text, html)
+        except Exception:
+            log.exception("test digest send failed")
+            return RedirectResponse("/settings?prova=errore", status_code=303)
+        return RedirectResponse("/settings?prova=ok", status_code=303)
 
     @app.get("/health")
     def health():

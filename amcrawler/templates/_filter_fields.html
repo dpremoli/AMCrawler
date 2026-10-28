@@ -1,0 +1,38 @@
+<fieldset>
+  <legend>Area</legend>
+  {% for a in areas %}
+  <label class="check"><input type="checkbox" name="area" value="{{ a }}"{% if a in search.areas %} checked{% endif %}> {{ a }}</label>
+  {% endfor %}
+</fieldset>
+<fieldset>
+  <legend>Formula</legend>
+  {% for f in formulas %}
+  <label class="check"><input type="checkbox" name="formula" value="{{ f }}"{% if f in search.formulas %} checked{% endif %}> {{ f }}</label>
+  {% endfor %}
+</fieldset>
+<label class="field">Paesi
+  <select name="country" multiple size="6">
+    {% for code, name in countries %}
+    <option value="{{ code }}"{% if code in search.countries %} selected{% endif %}>{{ name }}</option>
+    {% endfor %}
+  </select>
+</label>
+<div class="row">
+  <label class="field">Partenza tra (giorni)
+    <input type="number" inputmode="numeric" min="0" name="dfrom" value="{{ search.days_from if search.days_from is not none }}">
+  </label>
+  <label class="field">e (giorni)
+    <input type="number" inputmode="numeric" min="0" name="dto" value="{{ search.days_to if search.days_to is not none }}">
+  </label>
+</div>
+<div class="row">
+  <label class="field">Durata min (giorni)
+    <input type="number" inputmode="numeric" min="0" name="dmin" value="{{ search.duration_min if search.duration_min is not none }}">
+  </label>
+  <label class="field">Durata max (giorni)
+    <input type="number" inputmode="numeric" min="0" name="dmax" value="{{ search.duration_max if search.duration_max is not none }}">
+  </label>
+</div>
+<label class="field">Iscritti minimi
+  <input type="number" inputmode="numeric" min="1" name="pmin" value="{{ search.min_participants }}">
+</label>

@@ -50,6 +50,12 @@ mkdir -p /mnt/user/appdata/amcrawler/data
 chown 99:100 /mnt/user/appdata/amcrawler/data
 ```
 
+Keep SQLite on a cache-only (exclusive) appdata share. If `/mnt/user/appdata`
+is not exclusive (it goes through Unraid's FUSE `shfs` layer), mount
+`/mnt/cache/appdata/amcrawler/data` instead of the `/mnt/user/...` path in
+`docker-compose.yml` (and create and `chown` that folder): SQLite in WAL mode is
+unreliable over FUSE and can corrupt or lock the database.
+
 ## 4. Create `.env`
 
 ```bash
@@ -97,6 +103,7 @@ the `proxy` network, so nothing is published on the host.
    - Application domain: `viaggi.<your-domain>`
    - Identity provider: reuse the existing Google provider (no new one needed)
    - Session duration: 1 month
+   - Cookie settings: SameSite = Lax (CSRF protection for the POST routes)
    - Policy: action Allow, Include, Emails: `owner@example.com` and
      `maintainer@example.com`
 3. Open the saved application and copy the Application Audience (AUD) tag.
@@ -133,7 +140,12 @@ Then open `https://viaggi.<your-domain>` on the phone, sign in with Google, and
 use the browser menu "Aggiungi a schermata Home" to install it. A request that
 reaches the container without passing Cloudflare Access gets `403 Accesso negato`.
 
-To send a test Digest use Impostazioni, "Invia prova", or from the shell:
+To send a test Digest use Impostazioni, "Invia prova": it mails a `[PROVA]`
+copy and changes nothing.
+
+The shell command below is **not** a test. It is the real daily run: it uses
+today's slot and records a baseline, sent or empty Digest. Run it only to send
+today's Digest now, and only if it has not run yet today:
 
 ```bash
 docker exec amcrawler python -m amcrawler digest

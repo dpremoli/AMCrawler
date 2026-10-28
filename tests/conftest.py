@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
+import pytest
+
 from amcrawler.models import Departure, Itinerary
 
 TODAY = date(2026, 10, 28)
@@ -42,3 +44,12 @@ def itin(**overrides) -> Itinerary:
     )
     values.update(overrides)
     return Itinerary(**values)
+
+
+@pytest.fixture
+def store(tmp_path):
+    from amcrawler.store import Store
+
+    s = Store(str(tmp_path / "t.db"))
+    s.init()
+    return s

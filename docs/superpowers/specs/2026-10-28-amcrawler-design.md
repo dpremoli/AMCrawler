@@ -195,6 +195,11 @@ Digest ran now. Same set drives the map's accent colour.
   Also once at startup if the last ok snapshot is older than 3 h.
 - Digest: daily at `send_time` (default `07:00`, editable in GUI; changing it
   reschedules both jobs live).
+- Catch-up: jobs live in memory, so at scheduler start and whenever `send_time` is
+  changed, if local now is past today's `send_time` by less than 6 h and no
+  baseline/sent/empty Digest run exists for today, a one-off `digest-catchup` job
+  (date trigger, now + 2 min, after any startup crawl) runs the Digest. The
+  once-per-day guard makes a double run harmless.
 - Catalogue refresh: inside the crawl, if `itineraries.fetched_at` is older than 24 h,
   **or** (forced) if a fetched Departure belongs to an Itinerary the catalogue does not
   know yet, at most once per hour (last attempt kept in `settings`). Without this a

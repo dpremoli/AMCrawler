@@ -106,3 +106,89 @@ def test_parse_hhmm_ok():
     from amcrawler.config import parse_hhmm
 
     assert parse_hhmm("07:05") == (7, 5) and parse_hhmm("23:59") == (23, 59)
+
+
+# --- F2: missed Digest catch-up -------------------------------------------------
+
+def _start_at(cfg_dev, store, monkeypatch, utc_now):
+    monkeypatch.setattr(scheduler, "crawl_job", lambda app: None)
+    monkeypatch.setattr(scheduler, "digest_job", lambda app: None)
+    monkeypatch.setattr(scheduler, "_utcnow", lambda: utc_now)
+    app = create_app(cfg_dev, store=store, mailer=FakeMailer(), start_scheduler=False)
+    return app, scheduler.start_scheduler(app)
+
+
+@pytest.fixture
+def added_kwargs(monkeypatch):
+    """(job id, add_job kwargs) for every add_job call; one-off ("date") jobs are not
+    really added, because under the fake clock they would fire and vanish at once."""
+    calls = []
+    original = BackgroundScheduler.add_job
+
+    def spy(self, func, trigger=None, *args, **kwargs):
+        calls.append((kwargs.get("id"), kwargs))
+        if trigger == "date":
+            return None
+        return original(self, func, trigger, *args, **kwargs)
+
+    monkeypatch.setattr(BackgroundScheduler, "add_job", spy)
+    return calls
+
+
+def _added(calls):
+    return [i for i, _ in calls]
+
+
+@pytest.mark.parametrize("hour, minute, expected", [
+    (8, 0, True),      # an hour after the 07:00 send time
+    (12, 59, True),    # still inside the 6 h window
+    (13, 1, False),    # more than 6 h after
+    (6, 30, False),    # before send time: the normal job will run
+])
+def test_catchup_window_at_start(cfg_dev, store, monkeypatch, added_kwargs, hour, minute,
+                                 expected):
+    now = datetime(2026, 10, 28, hour, minute, tzinfo=timezone.utc)  # London == UTC here
+    app, sched = _start_at(cfg_dev, store, monkeypatch, now)
+    try:
+        assert ("digest-catchup" in _added(added_kwargs)) is expected
+    finally:
+        sched.shutdown(wait=False)
+
+
+def test_no_catchup_when_digest_already_ran_today(cfg_dev, store, monkeypatch, added_kwargs):
+    now = datetime(2026, 10, 28, 8, 0, tzinfo=timezone.utc)
+    sid = store.record_snapshot(now - timedelta(hours=1), [])
+    store.record_digest_run(now - timedelta(minutes=30), sid, "sent", [])
+    _, sched = _start_at(cfg_dev, store, monkeypatch, now)
+    try:
+        assert "digest-catchup" not in _added(added_kwargs)
+    finally:
+        sched.shutdown(wait=False)
+
+
+def test_catchup_runs_after_the_startup_crawl(cfg_dev, store, monkeypatch, added_kwargs):
+    now = datetime(2026, 10, 28, 8, 0, tzinfo=timezone.utc)
+    _, sched = _start_at(cfg_dev, store, monkeypatch, now)
+    try:
+        kwargs = dict(added_kwargs)["digest-catchup"]
+        assert kwargs["run_date"] > now + timedelta(minutes=1)
+        assert "crawl-startup" in _added(added_kwargs)
+    finally:
+        sched.shutdown(wait=False)
+
+
+def test_reschedule_earlier_than_now_schedules_catchup(cfg_dev, store, monkeypatch,
+                                                       added_kwargs):
+    now = datetime(2026, 10, 28, 8, 0, tzinfo=timezone.utc)
+    store.set_send_time("09:00")
+    app, sched = _start_at(cfg_dev, store, monkeypatch, now)
+    try:
+        assert "digest-catchup" not in _added(added_kwargs)
+        app.state.on_send_time_change("07:30")
+        assert "digest-catchup" in _added(added_kwargs)
+        # a later move replaces the pending job instead of stacking a second one
+        app.state.on_send_time_change("07:45")
+        assert all(k.get("replace_existing") for i, k in added_kwargs
+                   if i == "digest-catchup")
+    finally:
+        sched.shutdown(wait=False)

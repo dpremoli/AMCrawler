@@ -198,7 +198,9 @@ previously_matching(b) = matches(b, digest_filter, today)
   genuinely new Departures. The first-ever run with 0 Departures still records `baseline`
   with that snapshot (accepted: there is nothing older to protect). The sanity guard
   compares with the latest ok snapshot that has Departures, so a partial result after an
-  accepted empty one also needs the 24 h confirmation.
+  accepted empty one also needs the 24 h confirmation, while an empty result right after
+  an accepted empty snapshot is not a drop and is accepted at once (a persistent empty list
+  must not cycle through rejections).
 - **First ever run** (no previous digest_run): record status `baseline`, send
   nothing. Avoids a 59-Departure first email.
 - Ordering: by `start_date`, then name.

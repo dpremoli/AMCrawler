@@ -352,6 +352,18 @@ def test_inconsistent_drops_stay_rejected(store):
 
 
 @respx.mock
+def test_empty_after_accepted_empty_is_not_a_drop_but_partial_still_is(store):
+    _seed_previous(store)
+    assert [_crawl_n(store, 0, CRAWL_NOW + timedelta(hours=12 * k)).ok
+            for k in range(3)] == [False, False, True]
+    # persistent empty list: accepted immediately, no rejection cycle
+    assert [_crawl_n(store, 0, CRAWL_NOW + timedelta(hours=36 + 12 * k)).ok
+            for k in range(4)] == [True] * 4
+    # a partial result is still compared with the last non-empty snapshot
+    assert not _crawl_n(store, 5, CRAWL_NOW + timedelta(hours=90)).ok
+
+
+@respx.mock
 def test_one_old_rejection_is_not_enough(store):
     _seed_previous(store)
     _crawl_n(store, 10, CRAWL_NOW)

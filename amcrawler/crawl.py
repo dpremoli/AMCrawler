@@ -87,7 +87,10 @@ def run_crawl(store: Store, client: httpx.Client, now: datetime,
 
     # an accepted empty snapshot must not switch the guard off for a partial recovery
     previous = store.latest_nonempty_ok_snapshot()
-    if previous and previous.departure_count >= SANITY_MIN_PREVIOUS:
+    latest_ok = store.latest_ok_snapshot()
+    empty_after_empty = not departures and latest_ok is not None and latest_ok.departure_count == 0
+    # empty after an accepted empty snapshot is not a drop (a persistent empty list)
+    if previous and not empty_after_empty and previous.departure_count >= SANITY_MIN_PREVIOUS:
         reason = None
         if not departures:
             reason = "suspicious empty result"

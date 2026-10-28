@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import logging
-import re
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -17,7 +16,7 @@ from fastapi.templating import Jinja2Templates
 
 from . import digest, filters
 from .auth import AccessVerifier, install_auth
-from .config import Config, load_config
+from .config import Config, load_config, parse_hhmm
 from .geo import country_name_it, iso_numeric
 from .labels import filter_parts, giorni, plural_it
 from .mailer import MailerNotConfigured, SmtpMailer, date_range, render_digest, truncate_notes
@@ -34,7 +33,6 @@ _RUN_LABELS = {
     "failed": "Invio non riuscito",
     "stale": "Dati non aggiornati",
 }
-_SEND_TIME = re.compile(r"([01][0-9]|2[0-3]):[0-5][0-9]")
 log = logging.getLogger(__name__)
 
 def _href(pairs: list[tuple[str, str]], hidden_view: bool) -> str:
@@ -232,7 +230,9 @@ def create_app(
         form = await request.form()
         flt = Filter.from_query(form.multi_items())
         send_time = str(form.get("send_time", "")).strip()
-        if not _SEND_TIME.fullmatch(send_time):
+        try:
+            parse_hhmm(send_time)
+        except ValueError:
             return settings_page(request, flt, send_time,
                                  error="Orario non valido: usa il formato HH:MM.",
                                  status_code=400)

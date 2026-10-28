@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass
 from typing import Mapping
 
@@ -20,6 +21,17 @@ class Config:
     tz: str
     db_path: str
     dev_no_auth: bool
+
+
+_HHMM = re.compile(r"([01][0-9]|2[0-3]):([0-5][0-9])")
+
+
+def parse_hhmm(value: str) -> tuple[int, int]:
+    """Parse 'HH:MM' (ASCII digits, 00:00-23:59) into (hour, minute); else ValueError."""
+    m = _HHMM.fullmatch(value)
+    if m is None:
+        raise ValueError(f"invalid HH:MM time: {value!r}")
+    return int(m.group(1)), int(m.group(2))
 
 
 def _port(value: str | None, default: int) -> int:

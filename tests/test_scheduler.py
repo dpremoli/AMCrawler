@@ -92,3 +92,17 @@ def test_jobs_swallow_and_log_errors(cfg_dev, store, monkeypatch, caplog):
         scheduler.crawl_job(app)
         scheduler.digest_job(app)
     assert len([r for r in caplog.records if r.exc_info]) == 2
+
+
+@pytest.mark.parametrize("bad", ["", "7:00", "24:00", "07:60", "07-00", "٠٧:٠٠", "07:00 "])
+def test_parse_hhmm_rejects_bad_values(bad):
+    from amcrawler.config import parse_hhmm
+
+    with pytest.raises(ValueError):
+        parse_hhmm(bad)
+
+
+def test_parse_hhmm_ok():
+    from amcrawler.config import parse_hhmm
+
+    assert parse_hhmm("07:05") == (7, 5) and parse_hhmm("23:59") == (23, 59)

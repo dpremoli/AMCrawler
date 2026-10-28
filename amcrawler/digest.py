@@ -43,9 +43,9 @@ def _send_stale(store: Store, mailer, cfg: Config, now: datetime, last_ok) -> st
         hours = int((now - last_ok.taken_at).total_seconds() // 3600)
         latest = store.latest_snapshot()
         last_error = latest.error if latest is not None else None
-    subject, text = render_stale(hours, last_error)
     error = None
     try:
+        subject, text = render_stale(hours, last_error)
         mailer.send(cfg.digest_to, subject, text)
     except Exception as e:  # noqa: BLE001 - recorded, not raised
         error = str(e)
@@ -66,9 +66,10 @@ def _run(store: Store, mailer, cfg: Config, now: datetime, today: date) -> str:
     if not entries:
         store.record_digest_run(now, last_ok.id, "empty", [])
         return "empty"
-    subject, html, text = render_digest(entries, store.digest_filter(), cfg.public_url, today)
     ids = [d.id for d in entries]
     try:
+        subject, html, text = render_digest(
+            entries, store.digest_filter(), cfg.public_url, today)
         mailer.send(cfg.digest_to, subject, text, html)
     except Exception as e:  # noqa: BLE001 - recorded, not raised
         store.record_digest_run(now, last_ok.id, "failed", ids, str(e))

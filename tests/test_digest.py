@@ -107,3 +107,57 @@ def test_badged_ids_union(store):
 
 def test_compute_new_entries_without_snapshots(store):
     assert compute_new_entries(store, TODAY) == []
+
+
+def test_failed_send_retried_next_day_diffs_against_baseline(store):
+    _baseline(store)  # baseline at S1 = {d1}
+    store.record_snapshot(NOW - timedelta(hours=1), [dep(id="d1"), dep(id="d2")])
+    assert run_digest(store, FakeMailer(fail=True), CFG, NOW) == "failed"
+    later = NOW + timedelta(days=1)
+    store.record_snapshot(later - timedelta(hours=1), [dep(id="d1"), dep(id="d2")])
+    mailer = FakeMailer()
+    assert run_digest(store, mailer, CFG, later) == "sent"
+    assert store.last_sent_entry_ids() == {"d2"}
+
+
+def test_failed_or_stale_run_does_not_block_same_day_retry(store):
+    store.record_snapshot(NOW - timedelta(hours=30), [dep(id="d1")])
+    assert run_digest(store, FakeMailer(), CFG, NOW) == "stale"
+    store.record_snapshot(NOW + timedelta(minutes=10), [dep(id="d1")])
+    assert run_digest(store, FakeMailer(), CFG, NOW + timedelta(minutes=20)) != "skipped"
+
+
+def test_failed_run_does_not_block_same_day_retry(store):
+    _baseline(store)
+    store.record_snapshot(NOW + timedelta(hours=1), [dep(id="d1"), dep(id="d2")])
+    day2 = NOW + timedelta(days=1, hours=2)
+    store.record_snapshot(day2 - timedelta(hours=1), [dep(id="d1"), dep(id="d2")])
+    assert run_digest(store, FakeMailer(fail=True), CFG, day2) == "failed"
+    assert run_digest(store, FakeMailer(), CFG, day2 + timedelta(hours=1)) == "sent"
+
+
+def test_render_digest_error_records_failed(store, monkeypatch):
+    _baseline(store)
+    store.record_snapshot(NOW - timedelta(hours=1), [dep(id="d1"), dep(id="d2")])
+
+    def boom(*a, **k):
+        raise ValueError("template broke")
+
+    monkeypatch.setattr("amcrawler.digest.render_digest", boom)
+    assert run_digest(store, FakeMailer(), CFG, NOW) == "failed"
+    run = store.recent_digest_runs()[0]
+    assert run.status == "failed" and run.error == "template broke"
+
+
+def test_render_stale_error_records_stale(store, monkeypatch):
+    store.record_snapshot(NOW - timedelta(hours=30), [dep(id="d1")])
+
+    def boom(*a, **k):
+        raise ValueError("stale template broke")
+
+    monkeypatch.setattr("amcrawler.digest.render_stale", boom)
+    mailer = FakeMailer()
+    assert run_digest(store, mailer, CFG, NOW) == "stale"
+    assert mailer.sent == []
+    run = store.recent_digest_runs()[0]
+    assert run.status == "stale" and run.error == "stale template broke"

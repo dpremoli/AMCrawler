@@ -19,6 +19,7 @@ from . import digest, filters
 from .auth import AccessVerifier, install_auth
 from .config import Config, load_config
 from .geo import country_name_it, iso_numeric
+from .labels import filter_parts, giorni, plural_it
 from .mailer import SmtpMailer, date_range, render_digest, truncate_notes
 from .models import Departure, Filter
 from .source import itinerary_url
@@ -36,25 +37,6 @@ _RUN_LABELS = {
 _SEND_TIME = re.compile(r"([01][0-9]|2[0-3]):[0-5][0-9]")
 log = logging.getLogger(__name__)
 
-_INT_CHIPS = {
-    "dfrom": "Partenza tra almeno {} giorni",
-    "dto": "Partenza entro {} giorni",
-    "dmin": "Durata minima {} giorni",
-    "dmax": "Durata massima {} giorni",
-    "pmin": "Almeno {} iscritti",
-}
-
-
-def _chip_label(key: str, value: str) -> str:
-    if key == "area":
-        return f"Area: {value}"
-    if key == "country":
-        return f"Paese: {country_name_it(value)}"
-    if key == "formula":
-        return f"Formula: {value}"
-    return _INT_CHIPS[key].format(value)
-
-
 def _href(pairs: list[tuple[str, str]], hidden_view: bool) -> str:
     if hidden_view:
         pairs = pairs + [("nascoste", "1")]
@@ -64,9 +46,8 @@ def _href(pairs: list[tuple[str, str]], hidden_view: bool) -> str:
 def _chips(f: Filter, hidden_view: bool) -> list[dict]:
     pairs = f.to_query()
     return [
-        {"label": _chip_label(k, v),
-         "href": _href(pairs[:i] + pairs[i + 1:], hidden_view)}
-        for i, (k, v) in enumerate(pairs)
+        {"label": label, "href": _href(pairs[:i] + pairs[i + 1:], hidden_view)}
+        for i, (_key, _value, label) in enumerate(filter_parts(f))
     ]
 
 
@@ -76,10 +57,6 @@ def _pairs(values) -> list[tuple[str, str]]:
 
 def _country_pairs(codes) -> list[tuple[str, str]]:
     return sorted(((c, country_name_it(c)) for c in codes), key=lambda t: t[1])
-
-
-def _plural(n: int, one: str, many: str) -> str:
-    return f"{n} {one if n == 1 else many}"
 
 
 def create_app(
@@ -125,7 +102,7 @@ def create_app(
     templates.env.trim_blocks = True
     templates.env.lstrip_blocks = True
     templates.env.globals.update(
-        date_range=date_range, truncate_notes=truncate_notes,
+        date_range=date_range, giorni=giorni, plural_it=plural_it, truncate_notes=truncate_notes,
         country_name_it=country_name_it, itinerary_url=itinerary_url)
     templates.env.filters["country_name_it"] = country_name_it
     app.state.templates = templates
@@ -147,8 +124,8 @@ def create_app(
             text = "Nessun aggiornamento riuscito"
         else:
             at = last_ok.taken_at.astimezone(ZoneInfo(cfg.tz)).strftime("%H:%M")
-            text = (f"Aggiornato alle {at} · {_plural(shown, 'partenza', 'partenze')}"
-                    f" · {_plural(new, 'nuova', 'nuove')}")
+            text = (f"Aggiornato alle {at} · {plural_it(shown, 'partenza', 'partenze')}"
+                    f" · {plural_it(new, 'nuova', 'nuove')}")
         if crawl_bad:
             text += " · ultimo aggiornamento non riuscito"
         elif digest_bad:

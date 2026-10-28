@@ -3,7 +3,7 @@
     <h2>{{ d.name }}</h2>
     {% if d.id in badged %}<span class="badge">NUOVA</span>{% endif %}
   </header>
-  <p class="meta">{{ date_range(d.start_date, d.end_date) }} · {{ d.duration }} giorni · {{ d.participants }}/{{ d.max_participants }} iscritti</p>
+  <p class="meta">{{ date_range(d.start_date, d.end_date) }} · {{ giorni(d.duration) }} · {{ d.participants }}/{{ d.max_participants }} iscritti</p>
   <p class="meta">{{ d.formula }}{% if d.countries %} · {{ d.countries | map("country_name_it") | join(", ") }}{% endif %}</p>
   {% if d.notes %}
   <p class="notes" tabindex="0" role="button" aria-expanded="false" title="Tocca per espandere">{{ d.notes }}</p>

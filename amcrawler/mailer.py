@@ -9,6 +9,7 @@ from email.message import EmailMessage
 from jinja2 import Environment, PackageLoader, select_autoescape
 
 from .geo import country_name_it
+from .labels import describe_filter, giorni
 from .models import Departure, Filter
 from .source import itinerary_url
 
@@ -20,10 +21,6 @@ _env = Environment(
     trim_blocks=True,
     lstrip_blocks=True,
 )
-
-
-def giorni(n: int) -> str:
-    return f"{n} giorno" if n == 1 else f"{n} giorni"
 
 
 def short_date(d: date) -> str:
@@ -46,32 +43,6 @@ def truncate_notes(text: str, limit: int = 140) -> str:
     cut = text[:limit + 1].rfind(" ")
     cut = limit if cut <= 0 else cut
     return text[:cut].rstrip() + "…"
-
-
-def describe_filter(f: Filter) -> str:
-    parts: list[str] = []
-    if f.areas:
-        parts.append("Aree: " + ", ".join(f.areas))
-    if f.countries:
-        parts.append("Paesi: " + ", ".join(country_name_it(c) for c in f.countries))
-    if f.formulas:
-        label = "Formula" if len(f.formulas) == 1 else "Formule"
-        parts.append(f"{label}: " + ", ".join(f.formulas))
-    if f.days_from is not None and f.days_to is not None:
-        parts.append(f"Partenza tra {f.days_from} e {giorni(f.days_to)}")
-    elif f.days_from is not None:
-        parts.append(f"Partenza tra almeno {giorni(f.days_from)}")
-    elif f.days_to is not None:
-        parts.append(f"Partenza entro {giorni(f.days_to)}")
-    if f.duration_min is not None and f.duration_max is not None:
-        parts.append(f"Durata {f.duration_min}–{giorni(f.duration_max)}")
-    elif f.duration_min is not None:
-        parts.append(f"Durata minima {giorni(f.duration_min)}")
-    elif f.duration_max is not None:
-        parts.append(f"Durata massima {giorni(f.duration_max)}")
-    if f.min_participants > 1:
-        parts.append(f"Almeno {f.min_participants} iscritti")
-    return " · ".join(parts) if parts else "Tutte le partenze senza coordinatore"
 
 
 def _card(d: Departure) -> dict:

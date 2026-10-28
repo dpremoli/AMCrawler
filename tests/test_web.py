@@ -194,3 +194,16 @@ def test_head_index_ok_in_dev(client):
 def test_favicon_link(client):
     assert '<link rel="icon" href="/static/icon.svg" type="image/svg+xml">' in client.get("/").text
     assert client.get("/static/icon.svg").status_code == 200
+
+
+def test_one_day_departure_card_and_chip_use_singular(cfg_dev, store):
+    from tests.conftest import dep, itin
+
+    store.save_catalogue([itin()], NOW)
+    store.record_snapshot(NOW, [dep(id="x1", duration=1)])
+    c = TestClient(create_app(cfg_dev, store=store, mailer=FakeMailer(),
+                              start_scheduler=False, now=lambda: NOW))
+    html = c.get("/?dmax=1").text
+    card = html.split('data-id="x1"', 1)[1].split("</article>", 1)[0]
+    assert "1 giorno ·" in card and "1 giorni" not in card
+    assert "Durata massima 1 giorno" in html and "1 giorni" not in html

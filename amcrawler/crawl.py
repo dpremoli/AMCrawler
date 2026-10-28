@@ -15,6 +15,7 @@ log = logging.getLogger("amcrawler")
 CATALOGUE_MAX_AGE = timedelta(hours=24)
 UNKNOWN_ITINERARY_REFRESH = timedelta(hours=1)
 SANITY_MIN_PREVIOUS = 10
+SANITY_MIN_RATIO = 0.5
 
 
 def _refresh_catalogue(store: Store, client: httpx.Client, now: datetime) -> None:
@@ -56,11 +57,17 @@ def run_crawl(store: Store, client: httpx.Client, now: datetime,
             _refresh_catalogue(store, client, now)
 
     previous = store.latest_ok_snapshot()
-    if not departures and previous and previous.departure_count >= SANITY_MIN_PREVIOUS:
-        log.warning("crawl returned no Departures but the previous snapshot had %d",
-                    previous.departure_count)
-        store.record_snapshot(now, None, error="suspicious empty result")
-        return store.latest_snapshot()
+    if previous and previous.departure_count >= SANITY_MIN_PREVIOUS:
+        reason = None
+        if not departures:
+            reason = "suspicious empty result"
+        elif len(departures) < previous.departure_count * SANITY_MIN_RATIO:
+            reason = "suspicious drop"
+        if reason:
+            log.warning("crawl returned %d Departures but the previous snapshot had %d: %s",
+                        len(departures), previous.departure_count, reason)
+            store.record_snapshot(now, None, error=reason)
+            return store.latest_snapshot()
 
     store.record_snapshot(now, departures)
     log.info("crawl ok: %d Departures", len(departures))

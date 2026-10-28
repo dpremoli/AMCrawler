@@ -31,6 +31,16 @@ def test_parse_tours_page_drops_assigned():
     assert assigned and not set(assigned) & {d.code for d in deps}
 
 
+@pytest.mark.parametrize("pax, pax_max, kept", [(15, 15, False), (16, 15, False),
+                                                (14, 15, True), (15, 0, True)])
+def test_parse_tours_page_drops_full_departures(pax, pax_max, kept):
+    payload = load_json("tours_page1.json")
+    result = next(r for r in payload["data"]["results"] if not r["assignment"])
+    result["pax"], result["paxMax"] = pax, pax_max
+    deps, _ = parse_tours_page(payload)
+    assert (result["code"] in {d.code for d in deps}) is kept
+
+
 @pytest.mark.parametrize(
     "payload",
     [

@@ -88,6 +88,23 @@ def test_crawl_sanity_guard(store, previous, expected_ok):
 
 
 @respx.mock
+@pytest.mark.parametrize("previous, new, expected_ok", [(10, 4, False), (10, 5, True),
+                                                        (9, 1, True), (40, 19, False)])
+def test_crawl_partial_result_guard(store, previous, new, expected_ok):
+    store.record_snapshot(
+        CRAWL_NOW - timedelta(days=1), [dep(id=f"p{n}", code=f"c{n}") for n in range(previous)]
+    )
+    store.save_catalogue([itin()], CRAWL_NOW)
+    respx.get(TOURS).mock(return_value=httpx.Response(
+        200, json=_tours_payload(*[_tour(f"n{n}", "i1") for n in range(new)])))
+    info = run_crawl(store, make_client(), CRAWL_NOW, pause=0)
+    assert info.ok is expected_ok
+    if not expected_ok:
+        assert info.error == "suspicious drop"
+        assert store.latest_ok_snapshot().departure_count == previous
+
+
+@respx.mock
 def test_crawl_dedupes_departures(store):
     page1 = load_json("tours_page1.json")
     page2 = load_json("tours_page2.json")

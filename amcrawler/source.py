@@ -49,6 +49,9 @@ def _parse_departure(result: dict) -> Departure | None:
         raise ValueError("base must be an object")
     if result["assignment"] is not None or base["tourleaderMode"] != "regular":
         return None
+    # defence in depth: the API is asked for non-full Departures, but never trust it
+    if _int(result["paxMax"]) > 0 and _int(result["pax"]) >= _int(result["paxMax"]):
+        return None
     category = base["category"]
     return Departure(
         id=str(_str(result["id"])),

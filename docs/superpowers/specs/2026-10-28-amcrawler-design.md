@@ -208,7 +208,11 @@ Digest ran now. Same set drives the map's accent colour.
   timeout) → `snapshots` row with `ok=0`, `error` set. Retry at next schedule.
 - **Sanity guard:** if the API returns 0 Departures while the previous ok
   snapshot had ≥ 10, record `ok=0, error='suspicious empty result'`. Protects the
-  baseline from a broken API wiping the list.
+  baseline from a broken API wiping the list. The same guard records
+  `error='suspicious drop'` when the new count is below 50 % of a previous ok
+  snapshot that had ≥ 10 (partial API results).
+- The parser also drops full Departures (`pax >= paxMax`, `paxMax > 0`), even
+  though the request already asks for `isFull=0`.
 - Catalogue failure is non-fatal if a previous catalogue exists (logged, reused).
   The GUI status strip turns red with "catalogo non aggiornato" when the catalogue
   is older than 72 h.

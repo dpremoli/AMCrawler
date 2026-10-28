@@ -64,3 +64,16 @@ def store(tmp_path):
     s = Store(str(tmp_path / "t.db"))
     s.init()
     return s
+
+
+class FakeMailer:
+    """Records sent mail as (to, subject, text, html); fail=True makes send raise."""
+
+    def __init__(self, fail: bool = False):
+        self.fail = fail
+        self.sent: list[tuple] = []
+
+    def send(self, to, subject, text, html=None):
+        if self.fail:
+            raise RuntimeError("smtp down")
+        self.sent.append((to, subject, text, html))

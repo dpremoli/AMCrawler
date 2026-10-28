@@ -1,13 +1,24 @@
 """Shared test factories."""
 from __future__ import annotations
 
+import json
 from datetime import date, timedelta
+from pathlib import Path
 
 import pytest
 
 from amcrawler.models import Departure, Itinerary
 
 TODAY = date(2026, 10, 28)
+FIXTURES = Path(__file__).parent / "fixtures"
+
+
+def load_json(name):
+    return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
+
+
+def read_text(name):
+    return (FIXTURES / name).read_text(encoding="utf-8")
 
 
 def dep(**overrides) -> Departure:

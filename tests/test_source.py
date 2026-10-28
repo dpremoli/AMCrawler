@@ -1,11 +1,10 @@
-import json
 from datetime import date
-from pathlib import Path
 
 import httpx
 import pytest
 import respx
 
+from tests.conftest import load_json, read_text
 from amcrawler.source import (
     BASE_URL,
     SourceError,
@@ -15,17 +14,6 @@ from amcrawler.source import (
     parse_catalogue,
     parse_tours_page,
 )
-
-FIXTURES = Path(__file__).parent / "fixtures"
-
-
-def load_json(name):
-    return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
-
-
-def read_text(name):
-    return (FIXTURES / name).read_text(encoding="utf-8")
-
 
 def test_parse_tours_page_fields():
     deps, size = parse_tours_page(load_json("tours_page1.json"))

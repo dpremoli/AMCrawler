@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -175,3 +177,12 @@ def test_digest_test_without_recipient_explains(cfg_dev, seeded_store):
     r = c.post("/digest/test")
     assert r.status_code == 200 and "DIGEST_TO non impostato" in r.text
     assert mailer.sent == []
+
+
+def test_settings_keeps_saved_values_missing_from_catalogue(client, seeded_store):
+    seeded_store.set_digest_filter(Filter(countries=("NO",), areas=("Nord Europa",),
+                                          formulas=("Nuova",)))
+    html = client.get("/settings").text
+    assert re.search(r'name="country" value="NO" checked', html)
+    assert re.search(r'name="area" value="Nord Europa" checked', html)
+    assert re.search(r'name="formula" value="Nuova" checked', html)

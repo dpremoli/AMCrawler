@@ -181,6 +181,16 @@ class Store:
             for r in rows
         ]
 
+    def latest_ok_departures(self) -> list[Departure]:
+        snap = self.latest_ok_snapshot()
+        return self.snapshot_departures(snap.id) if snap else []
+
+    def formulas(self) -> list[str]:
+        with self._conn() as conn:
+            return [r["formula"] for r in conn.execute(
+                "SELECT DISTINCT formula FROM itineraries "
+                "WHERE formula IS NOT NULL AND formula != '' ORDER BY formula")]
+
     def prune_snapshots(self, before: datetime) -> int:
         cutoff = _ts(before)
         with self._conn() as conn:

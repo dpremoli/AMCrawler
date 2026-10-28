@@ -18,13 +18,17 @@ def today_in(tz: str, now: datetime) -> date:
     return now.astimezone(ZoneInfo(tz)).date()
 
 
-def compute_new_entries(store: Store, today: date) -> list[Departure]:
+def compute_new_entries(store: Store, today: date,
+                        current: list[Departure] | None = None) -> list[Departure]:
+    """New Entries since the baseline; `current` is the latest OK snapshot's Departures
+    when the caller has already loaded them."""
+    if current is None:
+        current = store.latest_ok_departures()
     baseline_id = store.baseline_snapshot_id()
-    latest = store.latest_ok_snapshot()
-    if baseline_id is None or latest is None:
+    if baseline_id is None or not current:
         return []
     return new_entries(
-        store.snapshot_departures(latest.id),
+        current,
         store.snapshot_departures(baseline_id),
         store.digest_filter(),
         store.hidden_ids(),
@@ -32,9 +36,11 @@ def compute_new_entries(store: Store, today: date) -> list[Departure]:
     )
 
 
-def badged_ids(store: Store, today: date) -> set[str]:
+def badged_ids(store: Store, today: date,
+               current: list[Departure] | None = None) -> set[str]:
     """Departures shown with the New badge: last sent Digest plus pending New Entries."""
-    return store.last_sent_entry_ids() | {d.id for d in compute_new_entries(store, today)}
+    return store.last_sent_entry_ids() | {
+        d.id for d in compute_new_entries(store, today, current)}
 
 
 def _send_stale(store: Store, mailer, cfg: Config, now: datetime, last_ok) -> str:

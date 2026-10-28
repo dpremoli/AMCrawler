@@ -21,9 +21,9 @@ from .config import Config, load_config
 from .geo import country_name_it, iso_numeric
 from .labels import filter_parts, giorni, plural_it
 from .mailer import SmtpMailer, date_range, render_digest, truncate_notes
-from .models import Departure, Filter
+from .models import Filter
 from .source import itinerary_url
-from .store import Store
+from .store import SnapshotInfo, Store
 
 _PKG = Path(__file__).parent
 _BAD_DIGEST = ("failed", "stale")
@@ -51,12 +51,15 @@ def _chips(f: Filter, hidden_view: bool) -> list[dict]:
     ]
 
 
-def _pairs(values) -> list[tuple[str, str]]:
-    return [(v, v) for v in sorted(values)]
-
-
-def _country_pairs(codes) -> list[tuple[str, str]]:
-    return sorted(((c, country_name_it(c)) for c in codes), key=lambda t: t[1])
+def _filter_options(areas, countries, formulas, selected: Filter) -> dict:
+    """Options for the three checkbox groups; selected values are always listed."""
+    return {
+        "areas": [(v, v) for v in sorted(set(areas) | set(selected.areas))],
+        "countries": sorted(((c, country_name_it(c))
+                             for c in set(countries) | set(selected.countries)),
+                            key=lambda t: t[1]),
+        "formulas": [(v, v) for v in sorted(set(formulas) | set(selected.formulas))],
+    }
 
 
 def create_app(
@@ -109,13 +112,8 @@ def create_app(
 
     app.mount("/static", StaticFiles(directory=str(_PKG / "static")), name="static")
 
-    def latest_ok_departures() -> list[Departure]:
-        snap = store.latest_ok_snapshot()
-        return store.snapshot_departures(snap.id) if snap else []
-
-    def status_strip(shown: int, new: int) -> dict:
+    def status_strip(last_ok: SnapshotInfo | None, shown: int, new: int) -> dict:
         latest = store.latest_snapshot()
-        last_ok = store.latest_ok_snapshot()
         runs = store.recent_digest_runs(1)
         digest_bad = bool(runs) and runs[0].status in _BAD_DIGEST
         crawl_bad = latest is not None and not latest.ok
@@ -138,17 +136,14 @@ def create_app(
         search = Filter.from_query(request.query_params.multi_items())
         hidden_view = request.query_params.get("nascoste") == "1"
         hidden = store.hidden_ids()
-        pool = [d for d in latest_ok_departures() if (d.id in hidden) == hidden_view]
+        last_ok = store.latest_ok_snapshot()
+        current = store.snapshot_departures(last_ok.id) if last_ok else []
+        pool = [d for d in current if (d.id in hidden) == hidden_view]
         results = sorted(filters.apply(pool, search, today),
                          key=lambda d: (d.start_date, d.name, d.id))
-        badged = digest.badged_ids(store, today)
+        badged = digest.badged_ids(store, today, current)
         new_count = sum(1 for d in results if d.id in badged)
 
-        itineraries = list(store.itineraries().values())
-        current = latest_ok_departures()
-        # keep selected values listed even when nothing matches them any more
-        present_areas = {a for d in current for a in d.areas} | set(search.areas)
-        present_codes = {c for d in current for c in d.countries} | set(search.countries)
         map_codes = sorted({c for d in results for c in d.countries})
         map_data = {
             "departures": [{"id": d.id, "name": d.name, "countries": list(d.countries),
@@ -162,10 +157,10 @@ def create_app(
             "hidden_view": hidden_view,
             "search": search,
             "chips": _chips(search, hidden_view),
-            "status": status_strip(len(results), new_count),
-            "areas": _pairs(present_areas),
-            "formulas": _pairs({i.formula for i in itineraries if i.formula}),
-            "countries": _country_pairs(present_codes),
+            "status": status_strip(last_ok, len(results), new_count),
+            **_filter_options({a for d in current for a in d.areas},
+                              {c for d in current for c in d.countries},
+                              store.formulas(), search),
             "map_data": map_data,
             "list_href": _href(search.to_query(), False),
             "hidden_href": _href(search.to_query(), True),
@@ -175,7 +170,7 @@ def create_app(
 
     @app.post("/hide/{departure_id}")
     def hide(departure_id: str):
-        match = next((d for d in latest_ok_departures() if d.id == departure_id), None)
+        match = next((d for d in store.latest_ok_departures() if d.id == departure_id), None)
         if match is None:
             return JSONResponse({"ok": False, "error": "partenza non trovata"},
                                 status_code=404)
@@ -222,9 +217,9 @@ def create_app(
             "test_result": request.query_params.get("prova"),
             "recipient": cfg.digest_to,
             "runs": runs,
-            "areas": _pairs({a for i in itineraries for a in i.areas}),
-            "formulas": _pairs({i.formula for i in itineraries if i.formula}),
-            "countries": _country_pairs({c for i in itineraries for c in i.countries}),
+            **_filter_options({a for i in itineraries for a in i.areas},
+                              {c for i in itineraries for c in i.countries},
+                              store.formulas(), flt),
         }
         return templates.TemplateResponse(request, "settings.html", ctx,
                                           status_code=status_code)

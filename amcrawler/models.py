@@ -33,6 +33,8 @@ class Departure:
     notes: str
     areas: tuple[str, ...] = ()
     countries: tuple[str, ...] = ()
+    # False when the Itinerary had no catalogue row when the Departure was crawled
+    catalogued: bool = True
 
 
 _INT_FIELDS = (

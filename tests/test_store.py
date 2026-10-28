@@ -123,3 +123,43 @@ def test_init_is_idempotent(tmp_path):
     s.save_catalogue([itin()], STORE_NOW)
     s.init()
     assert set(s.itineraries()) == {"i1"}
+
+
+def test_init_migrates_old_snapshot_departures_adding_catalogued(tmp_path):
+    import sqlite3
+
+    from amcrawler.store import Store
+
+    path = str(tmp_path / "old.db")
+    conn = sqlite3.connect(path)
+    conn.executescript("""
+        CREATE TABLE itineraries(id TEXT PRIMARY KEY, code TEXT, name TEXT, formula TEXT,
+            areas_json TEXT, countries_json TEXT, coordinator_free INTEGER, fetched_at TEXT);
+        CREATE TABLE snapshots(id INTEGER PRIMARY KEY, taken_at TEXT, ok INTEGER,
+            error TEXT, departure_count INTEGER);
+        CREATE TABLE snapshot_departures(snapshot_id INTEGER, departure_id TEXT,
+            itinerary_id TEXT, itinerary_code TEXT, code TEXT, name TEXT, formula TEXT,
+            start_date TEXT, end_date TEXT, duration INTEGER, participants INTEGER,
+            max_participants INTEGER, notes TEXT, PRIMARY KEY(snapshot_id, departure_id));
+        INSERT INTO itineraries VALUES('i1','1','n','f','[\"Asia\"]','[\"TH\"]',0,'2026-10-28T00:00:00+00:00');
+        INSERT INTO snapshots VALUES(1,'2026-10-28T00:00:00+00:00',1,NULL,2);
+        INSERT INTO snapshot_departures VALUES(1,'a','i1','1','c','n','f','2026-12-01','2026-12-12',12,5,15,'');
+        INSERT INTO snapshot_departures VALUES(1,'b','i2','2','c','n','f','2026-12-01','2026-12-12',12,5,15,'');
+    """)
+    conn.commit()
+    conn.close()
+    s = Store(path)
+    s.init()
+    s.init()  # idempotent
+    got = {d.id: d.catalogued for d in s.snapshot_departures(1)}
+    assert got == {"a": True, "b": False}
+
+
+def test_catalogued_flag_round_trips(store):
+    from datetime import datetime, timezone
+
+    from tests.conftest import dep
+
+    sid = store.record_snapshot(datetime(2026, 10, 28, tzinfo=timezone.utc),
+                                [dep(id="a", catalogued=False), dep(id="b")])
+    assert {d.id: d.catalogued for d in store.snapshot_departures(sid)} == {"a": False, "b": True}

@@ -1,6 +1,7 @@
 """The crawl job: refresh the catalogue, fetch Uncovered Departures, record a snapshot."""
 from __future__ import annotations
 
+import dataclasses
 import logging
 from datetime import datetime, timedelta
 
@@ -55,6 +56,11 @@ def run_crawl(store: Store, client: httpx.Client, now: datetime,
         if attempted is None or now - attempted >= UNKNOWN_ITINERARY_REFRESH:
             log.info("Departure of an unknown Itinerary: refreshing the catalogue")
             _refresh_catalogue(store, client, now)
+
+    # remember which Departures had catalogue data now (see diff.new_entries)
+    known = store.itineraries()
+    departures = [d if d.itinerary_id in known else dataclasses.replace(d, catalogued=False)
+                  for d in departures]
 
     previous = store.latest_ok_snapshot()
     if previous and previous.departure_count >= SANITY_MIN_PREVIOUS:

@@ -34,3 +34,26 @@ def test_sorted_by_start_then_name():
     b = dep(id="b", name="A", start_date=TODAY + timedelta(days=5))
     c = dep(id="c", start_date=TODAY + timedelta(days=1))
     assert [d.id for d in new_entries([a, b, c], [], Filter(), set(), TODAY)] == ["c", "b", "a"]
+
+
+def test_uncatalogued_baseline_is_unknown_under_an_area_filter():
+    f = Filter(areas=("Asia",))
+    now = dep(id="x", areas=("Asia",))
+    before = dep(id="x", areas=(), countries=(), catalogued=False)
+    assert [d.id for d in new_entries([now], [before], f, set(), TODAY)] == ["x"]
+    f = Filter(countries=("TH",))
+    now = dep(id="x", countries=("TH",))
+    assert [d.id for d in new_entries([now], [before], f, set(), TODAY)] == ["x"]
+
+
+def test_uncatalogued_baseline_counts_without_area_or_country_filter():
+    f = Filter(min_participants=1)
+    now = dep(id="x", areas=("Asia",))
+    before = dep(id="x", areas=(), countries=(), catalogued=False)
+    assert new_entries([now], [before], f, set(), TODAY) == []
+
+
+def test_catalogued_baseline_that_matched_is_not_new():
+    f = Filter(areas=("Asia",))
+    x = dep(id="x", areas=("Asia",))
+    assert new_entries([x], [x], f, set(), TODAY) == []

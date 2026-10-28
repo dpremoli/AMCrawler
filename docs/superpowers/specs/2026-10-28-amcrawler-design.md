@@ -129,7 +129,7 @@ itineraries(id TEXT PK, code TEXT, name TEXT, formula TEXT,
 snapshots(id INTEGER PK, taken_at TEXT, ok INT, error TEXT, departure_count INT)
 snapshot_departures(snapshot_id INT, departure_id TEXT, itinerary_id TEXT,
             itinerary_code TEXT, code TEXT, name TEXT, formula TEXT, start_date TEXT, end_date TEXT,
-            duration INT, participants INT, max_participants INT, notes TEXT,
+            duration INT, participants INT, max_participants INT, notes TEXT, catalogued INT NOT NULL DEFAULT 1,
             PRIMARY KEY(snapshot_id, departure_id))
 digest_runs(id INTEGER PK, run_at TEXT, snapshot_id INT,
             status TEXT,  -- 'baseline' | 'sent' | 'empty' | 'failed' | 'stale'
@@ -141,7 +141,8 @@ settings(key TEXT PK, value_json TEXT)  -- 'digest_filter', 'send_time'
 
 Areas/Countries/Formula for a Departure come from the joined Itinerary at read
 time (the catalogue rarely changes; snapshot rows keep name/formula for display
-history). Snapshots older than 365 days are deleted by the daily Digest job.
+history). `catalogued` records whether the Itinerary had a catalogue row when the
+Departure was crawled (see §6). Snapshots older than 365 days are deleted by the daily Digest job.
 
 ## 5. Filter model
 
@@ -173,8 +174,17 @@ current  = most recent snapshot with ok=1
 new = [d for d in current
        if d.id not in hidden
        and matches(d, digest_filter, today)
-       and not (d.id in baseline and matches(baseline[d.id], digest_filter, today))]
+       and not (d.id in baseline and previously_matching(baseline[d.id]))]
+
+previously_matching(b) = matches(b, digest_filter, today)
+                         and (b.catalogued or not (filter.areas or filter.countries))
 ```
+
+- A baseline row with no catalogue data at crawl time (`catalogued` false) is unknown
+  when the filter constrains Areas/Countries: it could not match then, so it counts as
+  not previously matching and is reported once the catalogue knows it. Without
+  Area/Country constraints catalogue data is irrelevant and the normal rule applies
+  (a permanently uncatalogued Departure is not reported every day).
 
 - Both sides use **today's** filter and **today's** date, so editing the filter
   never floods the next Digest, while a Departure crossing the minimum
@@ -202,9 +212,10 @@ Digest ran now. Same set drives the map's accent colour.
   once-per-day guard makes a double run harmless.
 - Catalogue refresh: inside the crawl, if `itineraries.fetched_at` is older than 24 h,
   **or** (forced) if a fetched Departure belongs to an Itinerary the catalogue does not
-  know yet, at most once per hour (last attempt kept in `settings`). Without this a
-  new Itinerary has no Areas/Countries, fails an Area/Country Digest Filter, and is
-  never reported once the catalogue catches up.
+  know yet, at most once per hour (last attempt kept in `settings`). This makes the
+  catalogue catch up the same day in the normal case; if it still cannot (refresh
+  failed, throttled, or the Itinerary is not listed yet), the `catalogued` flag (§6)
+  guarantees the Departure is reported once the catalogue does know it.
 - APScheduler `coalesce=True`, `misfire_grace_time=3600`, `max_instances=1`.
 
 ## 8. Crawl and failure handling

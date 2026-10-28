@@ -192,3 +192,77 @@ def test_no_forced_refresh_when_catalogue_was_just_refreshed(store):
     bases = mock_bases(_bases_text(("i1", "Europa")))  # stale-triggered refresh lacks i2
     run_crawl(store, make_client(), CRAWL_NOW, pause=0)
     assert bases.call_count == 1
+
+
+# --- R1: a baseline row without catalogue data is unknown, not "previously matching" ----
+
+def _digest_cfg(tmp_path):
+    from amcrawler.config import load_config
+
+    return load_config({
+        "AMC_PUBLIC_URL": "https://viaggi.example.com",
+        "DIGEST_FROM": "maintainer@example.com",
+        "DIGEST_TO": "owner@example.com",
+        "AMC_DB_PATH": str(tmp_path / "r1.db"),
+        "AMC_DEV_NO_AUTH": "1",
+    })
+
+
+def _seed_asia_baseline(store):
+    store.set_digest_filter(Filter(areas=("Asia",)))
+    store.save_catalogue([itin(id="i1", areas=("Europa",))], CRAWL_NOW - timedelta(hours=25))
+    base = store.record_snapshot(CRAWL_NOW - timedelta(days=1),
+                                 [dep(id="a", itinerary_id="i1", areas=("Europa",))])
+    store.record_digest_run(CRAWL_NOW - timedelta(days=1), base, "baseline", [])
+
+
+def _digest_at(store, mailer, tmp_path, now):
+    return digest.run_digest(store, mailer, _digest_cfg(tmp_path), now)
+
+
+def _day1_unknown_i2_then_day2(store, tmp_path, bases_day1):
+    """Day 1: the catalogue lacks i2 (bases_day1); day 2: it lists i2 under Asia."""
+    from tests.conftest import FakeMailer
+
+    _seed_asia_baseline(store)
+    mailer = FakeMailer()
+    respx.get(TOURS).mock(return_value=httpx.Response(
+        200, json=_tours_payload(_tour("a", "i1"), _tour("b", "i2"))))
+    respx.get(f"{BASE_URL}/data/bases.js").mock(side_effect=[
+        bases_day1, httpx.Response(200, text=_bases_text(("i1", "Europa"), ("i2", "Asia")))])
+    run_crawl(store, make_client(), CRAWL_NOW, pause=0)
+    assert _digest_at(store, mailer, tmp_path, CRAWL_NOW + timedelta(hours=1)) == "empty"
+    day2 = CRAWL_NOW + timedelta(days=1, hours=1)
+    run_crawl(store, make_client(), day2, pause=0)
+    assert _digest_at(store, mailer, tmp_path, day2 + timedelta(hours=1)) == "sent"
+    return mailer
+
+
+@respx.mock
+def test_new_entry_not_lost_when_forced_catalogue_refresh_fails(store, tmp_path):
+    mailer = _day1_unknown_i2_then_day2(store, tmp_path, httpx.Response(503))
+    assert "2026-b" in mailer.sent[0][2]
+
+
+@respx.mock
+def test_new_entry_not_lost_when_catalogue_lacks_itinerary_on_day_one(store, tmp_path):
+    mailer = _day1_unknown_i2_then_day2(
+        store, tmp_path, httpx.Response(200, text=_bases_text(("i1", "Europa"))))
+    assert "2026-b" in mailer.sent[0][2]
+
+
+@respx.mock
+def test_uncatalogued_departure_without_area_filter_is_not_reported_daily(store, tmp_path):
+    from tests.conftest import FakeMailer
+
+    store.save_catalogue([itin(id="i1")], CRAWL_NOW - timedelta(hours=2))
+    mailer = FakeMailer()
+    respx.get(TOURS).mock(return_value=httpx.Response(
+        200, json=_tours_payload(_tour("b", "i2"))))
+    mock_bases(_bases_text(("i1", "Europa")))  # i2 never appears
+    run_crawl(store, make_client(), CRAWL_NOW - timedelta(days=1), pause=0)
+    store.record_digest_run(CRAWL_NOW - timedelta(days=1),
+                            store.latest_ok_snapshot().id, "baseline", [])
+    run_crawl(store, make_client(), CRAWL_NOW, pause=0)
+    assert _digest_at(store, mailer, tmp_path, CRAWL_NOW + timedelta(hours=1)) == "empty"
+    assert mailer.sent == []

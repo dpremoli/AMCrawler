@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS snapshot_departures(
     snapshot_id INTEGER, departure_id TEXT, itinerary_id TEXT,
     itinerary_code TEXT, code TEXT, name TEXT, formula TEXT,
     start_date TEXT, end_date TEXT, duration INTEGER, participants INTEGER,
-    max_participants INTEGER, notes TEXT,
+    max_participants INTEGER, notes TEXT, catalogued INTEGER NOT NULL DEFAULT 1,
     PRIMARY KEY(snapshot_id, departure_id));
 CREATE TABLE IF NOT EXISTS digest_runs(
     id INTEGER PRIMARY KEY, run_at TEXT, snapshot_id INTEGER, status TEXT,
@@ -99,6 +99,14 @@ class Store:
             conn.execute("PRAGMA journal_mode=WAL")
         with self._conn() as conn:
             conn.executescript(_SCHEMA)
+            columns = {r["name"] for r in conn.execute(
+                "PRAGMA table_info(snapshot_departures)")}
+            if "catalogued" not in columns:
+                conn.execute("ALTER TABLE snapshot_departures "
+                             "ADD COLUMN catalogued INTEGER NOT NULL DEFAULT 1")
+                conn.execute(
+                    "UPDATE snapshot_departures SET catalogued = 0 WHERE itinerary_id "
+                    "NOT IN (SELECT id FROM itineraries)")
 
     # catalogue
     def save_catalogue(self, items: list[Itinerary], fetched_at: datetime) -> None:
@@ -148,10 +156,11 @@ class Store:
             )
             sid = cur.lastrowid
             conn.executemany(
-                "INSERT INTO snapshot_departures VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO snapshot_departures VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 [(sid, d.id, d.itinerary_id, d.itinerary_code, d.code, d.name, d.formula,
                   d.start_date.isoformat(), d.end_date.isoformat(), d.duration,
-                  d.participants, d.max_participants, d.notes) for d in deps],
+                  d.participants, d.max_participants, d.notes, int(d.catalogued))
+                 for d in deps],
             )
         return sid
 
@@ -185,6 +194,7 @@ class Store:
                 max_participants=r["max_participants"], notes=r["notes"],
                 areas=_json_tuple(r["areas_json"]),
                 countries=_json_tuple(r["countries_json"]),
+                catalogued=bool(r["catalogued"]),
             )
             for r in rows
         ]

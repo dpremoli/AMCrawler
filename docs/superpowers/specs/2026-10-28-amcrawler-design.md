@@ -226,7 +226,13 @@ Digest ran now. Same set drives the map's accent colour.
   snapshot had ≥ 10, record `ok=0, error='suspicious empty result'`. Protects the
   baseline from a broken API wiping the list. The same guard records
   `error='suspicious drop'` when the new count is below 50 % of a previous ok
-  snapshot that had ≥ 10 (partial API results).
+  snapshot that had ≥ 10 (partial API results). A rejected snapshot keeps the fetched
+  count in `departure_count`. **Recovery:** the guard compares with the last ok snapshot,
+  which stops advancing, so a genuine drop would be rejected forever; when the previous
+  `CONFIRM_SUSPICIOUS = 2` crawls since the last ok snapshot were also rejected as
+  suspicious and their counts are within ±10 % of this one (all exactly 0 for an empty
+  result), the 3rd consecutive result is accepted (ok=1) and a WARNING
+  "suspicious result confirmed after 3 crawls; accepting" is logged.
 - The parser also drops full Departures (`pax >= paxMax`, `paxMax > 0`), even
   though the request already asks for `isFull=0`.
 - Catalogue failure is non-fatal if a previous catalogue exists (logged, reused).

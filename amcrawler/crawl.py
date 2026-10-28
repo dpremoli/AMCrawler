@@ -17,6 +17,17 @@ CATALOGUE_MAX_AGE = timedelta(hours=24)
 UNKNOWN_ITINERARY_REFRESH = timedelta(hours=1)
 SANITY_MIN_PREVIOUS = 10
 SANITY_MIN_RATIO = 0.5
+CONFIRM_SUSPICIOUS = 2  # earlier rejections that must agree before a drop is accepted
+CONFIRM_TOLERANCE = 0.10
+SUSPICIOUS_ERRORS = ("suspicious empty result", "suspicious drop")
+
+
+def _confirmed(store: Store, count: int) -> bool:
+    """True when the last CONFIRM_SUSPICIOUS crawls were also rejected as suspicious with
+    counts within the tolerance of `count` (exactly 0 for an empty result)."""
+    earlier = store.recent_rejected_counts(SUSPICIOUS_ERRORS, CONFIRM_SUSPICIOUS)
+    return (len(earlier) == CONFIRM_SUSPICIOUS
+            and all(abs(c - count) <= CONFIRM_TOLERANCE * count for c in earlier))
 
 
 def _refresh_catalogue(store: Store, client: httpx.Client, now: datetime) -> None:
@@ -69,10 +80,14 @@ def run_crawl(store: Store, client: httpx.Client, now: datetime,
             reason = "suspicious empty result"
         elif len(departures) < previous.departure_count * SANITY_MIN_RATIO:
             reason = "suspicious drop"
+        if reason and _confirmed(store, len(departures)):
+            log.warning("suspicious result confirmed after %d crawls; accepting",
+                        CONFIRM_SUSPICIOUS + 1)
+            reason = None
         if reason:
             log.warning("crawl returned %d Departures but the previous snapshot had %d: %s",
                         len(departures), previous.departure_count, reason)
-            store.record_snapshot(now, None, error=reason)
+            store.record_snapshot(now, None, error=reason, fetched_count=len(departures))
             return store.latest_snapshot()
 
     store.record_snapshot(now, departures)

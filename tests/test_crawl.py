@@ -266,3 +266,58 @@ def test_uncatalogued_departure_without_area_filter_is_not_reported_daily(store,
     run_crawl(store, make_client(), CRAWL_NOW, pause=0)
     assert _digest_at(store, mailer, tmp_path, CRAWL_NOW + timedelta(hours=1)) == "empty"
     assert mailer.sent == []
+
+
+# --- R2: the drop guard recovers from a genuine drop ----------------------------------
+
+def _crawl_n(store, n_found, when):
+    respx.get(TOURS).mock(return_value=httpx.Response(
+        200, json=_tours_payload(*[_tour(f"n{k}", "i1") for k in range(n_found)])))
+    return run_crawl(store, make_client(), when, pause=0)
+
+
+def _seed_previous(store, n=40):
+    store.save_catalogue([itin()], CRAWL_NOW)
+    store.record_snapshot(CRAWL_NOW - timedelta(days=1),
+                          [dep(id=f"p{k}", code=f"c{k}") for k in range(n)])
+
+
+@respx.mock
+def test_three_consistent_drops_are_accepted_on_the_third(store, caplog):
+    import logging
+
+    _seed_previous(store)
+    infos = []
+    with caplog.at_level(logging.WARNING, logger="amcrawler"):
+        for k, found in enumerate((10, 10, 11)):
+            infos.append(_crawl_n(store, found, CRAWL_NOW + timedelta(hours=3 * k)))
+    assert [i.ok for i in infos] == [False, False, True]
+    assert infos[0].departure_count == 10 and infos[1].error == "suspicious drop"
+    assert store.latest_ok_snapshot().departure_count == 11
+    assert "suspicious result confirmed after 3 crawls; accepting" in caplog.text
+    # later crawls compare to the accepted snapshot
+    assert _crawl_n(store, 10, CRAWL_NOW + timedelta(hours=12)).ok
+
+
+@respx.mock
+def test_three_consistent_empty_results_are_accepted(store):
+    _seed_previous(store)
+    oks = [_crawl_n(store, 0, CRAWL_NOW + timedelta(hours=3 * k)).ok for k in range(3)]
+    assert oks == [False, False, True]
+
+
+@respx.mock
+def test_inconsistent_drops_stay_rejected(store):
+    _seed_previous(store)
+    oks = [_crawl_n(store, n, CRAWL_NOW + timedelta(hours=3 * k)).ok
+           for k, n in enumerate((10, 15, 10, 0, 0))]
+    assert oks == [False, False, False, False, False]
+
+
+@respx.mock
+def test_a_non_suspicious_failure_does_not_count(store):
+    _seed_previous(store)
+    _crawl_n(store, 10, CRAWL_NOW)
+    respx.get(TOURS).mock(return_value=httpx.Response(503))
+    run_crawl(store, make_client(), CRAWL_NOW + timedelta(hours=3), pause=0)
+    assert not _crawl_n(store, 10, CRAWL_NOW + timedelta(hours=6)).ok

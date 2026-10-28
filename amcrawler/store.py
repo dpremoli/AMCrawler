@@ -146,13 +146,14 @@ class Store:
 
     # snapshots
     def record_snapshot(self, taken_at: datetime, departures: list[Departure] | None,
-                        error: str | None = None) -> int:
+                        error: str | None = None, fetched_count: int = 0) -> int:
+        """Record a snapshot; a rejected one (departures None) keeps `fetched_count`."""
         ok = departures is not None
         deps = departures or []
         with self._conn() as conn:
             cur = conn.execute(
                 "INSERT INTO snapshots(taken_at, ok, error, departure_count) VALUES (?,?,?,?)",
-                (_ts(taken_at), int(ok), error, len(deps)),
+                (_ts(taken_at), int(ok), error, len(deps) if ok else fetched_count),
             )
             sid = cur.lastrowid
             conn.executemany(
@@ -175,6 +176,17 @@ class Store:
 
     def latest_ok_snapshot(self) -> SnapshotInfo | None:
         return self._newest_snapshot("WHERE ok = 1")
+
+    def recent_rejected_counts(self, errors: tuple[str, ...], limit: int) -> list[int]:
+        """Fetched counts of the newest snapshots rejected with one of `errors` since the
+        last OK snapshot, newest first."""
+        marks = ",".join("?" * len(errors))
+        with self._conn() as conn:
+            rows = conn.execute(
+                f"SELECT departure_count FROM snapshots WHERE ok = 0 AND error IN ({marks}) "
+                "AND id > COALESCE((SELECT MAX(id) FROM snapshots WHERE ok = 1), 0) "
+                "ORDER BY id DESC LIMIT ?", (*errors, limit)).fetchall()
+        return [r["departure_count"] for r in rows]
 
     def snapshot_departures(self, snapshot_id: int) -> list[Departure]:
         with self._conn() as conn:

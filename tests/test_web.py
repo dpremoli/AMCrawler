@@ -152,3 +152,45 @@ def test_hostile_text_is_escaped(cfg_dev, store):
         'data-id="x1"', 1)[1].split("</article>", 1)[0]
     data = _map_data(html)
     assert data["departures"][0]["name"] == evil
+
+
+def test_search_sheet_lists_only_current_countries(client, seeded_store):
+    from tests.conftest import itin
+
+    seeded_store.save_catalogue([
+        itin(id="i1", code="0001", countries=("TH",)),
+        itin(id="i2", code="0002", formula="Discovery", areas=("Estremo Oriente",),
+             countries=("JP",)),
+        itin(id="i3", code="0003", areas=("Africa",), countries=("KE",)),
+        itin(id="i9", code="0009", areas=("Nord Europa",), countries=("NO",)),
+    ], NOW)
+    html = client.get("/").text
+    assert 'name="country" value="JP"' in html
+    assert 'name="country" value="NO"' not in html
+    assert 'value="Nord Europa"' not in html
+
+
+def test_filter_groups_are_details_open_when_selected(client):
+    html = client.get("/?country=JP").text
+    assert "<details" in html
+    assert re.search(r'<details class="group" open>\s*<summary>Paese · 1 selezionato', html)
+    assert re.search(r'<details class="group">\s*<summary>Area</summary>', html)
+
+
+def test_head_health_and_index(cfg_dev, seeded_store):
+    import dataclasses
+
+    cfg = dataclasses.replace(cfg_dev, dev_no_auth=False)
+    c = TestClient(create_app(cfg, store=seeded_store, mailer=FakeMailer(),
+                              start_scheduler=False, now=lambda: NOW))
+    assert c.head("/health").status_code == 200
+    assert c.head("/").status_code == 403
+
+
+def test_head_index_ok_in_dev(client):
+    assert client.head("/").status_code == 200
+
+
+def test_favicon_link(client):
+    assert '<link rel="icon" href="/static/icon.svg" type="image/svg+xml">' in client.get("/").text
+    assert client.get("/static/icon.svg").status_code == 200

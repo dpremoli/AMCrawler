@@ -33,7 +33,7 @@ _RUN_LABELS = {
     "failed": "Invio non riuscito",
     "stale": "Dati non aggiornati",
 }
-_SEND_TIME = re.compile(r"([01]\d|2[0-3]):[0-5]\d")
+_SEND_TIME = re.compile(r"([01][0-9]|2[0-3]):[0-5][0-9]")
 log = logging.getLogger(__name__)
 
 _INT_CHIPS = {
@@ -68,6 +68,14 @@ def _chips(f: Filter, hidden_view: bool) -> list[dict]:
          "href": _href(pairs[:i] + pairs[i + 1:], hidden_view)}
         for i, (k, v) in enumerate(pairs)
     ]
+
+
+def _pairs(values) -> list[tuple[str, str]]:
+    return [(v, v) for v in sorted(values)]
+
+
+def _country_pairs(codes) -> list[tuple[str, str]]:
+    return sorted(((c, country_name_it(c)) for c in codes), key=lambda t: t[1])
 
 
 def _plural(n: int, one: str, many: str) -> str:
@@ -147,7 +155,7 @@ def create_app(
             text += " · ultimo Digest non riuscito"
         return {"text": text, "bad": bad}
 
-    @app.get("/")
+    @app.api_route("/", methods=["GET", "HEAD"])
     def index(request: Request):
         today = digest.today_in(cfg.tz, now())
         search = Filter.from_query(request.query_params.multi_items())
@@ -160,7 +168,10 @@ def create_app(
         new_count = sum(1 for d in results if d.id in badged)
 
         itineraries = list(store.itineraries().values())
-        codes = {c for i in itineraries for c in i.countries}
+        current = latest_ok_departures()
+        # keep selected values listed even when nothing matches them any more
+        present_areas = {a for d in current for a in d.areas} | set(search.areas)
+        present_codes = {c for d in current for c in d.countries} | set(search.countries)
         map_codes = sorted({c for d in results for c in d.countries})
         map_data = {
             "departures": [{"id": d.id, "name": d.name, "countries": list(d.countries),
@@ -175,10 +186,9 @@ def create_app(
             "search": search,
             "chips": _chips(search, hidden_view),
             "status": status_strip(len(results), new_count),
-            "areas": sorted({a for i in itineraries for a in i.areas}),
-            "formulas": sorted({i.formula for i in itineraries if i.formula}),
-            "countries": sorted(((c, country_name_it(c)) for c in codes),
-                                key=lambda t: t[1]),
+            "areas": _pairs(present_areas),
+            "formulas": _pairs({i.formula for i in itineraries if i.formula}),
+            "countries": _country_pairs(present_codes),
             "map_data": map_data,
             "list_href": _href(search.to_query(), False),
             "hidden_href": _href(search.to_query(), True),
@@ -235,12 +245,9 @@ def create_app(
             "test_result": request.query_params.get("prova"),
             "recipient": cfg.digest_to,
             "runs": runs,
-            "areas": sorted({a for i in itineraries for a in i.areas}),
-            "formulas": sorted({i.formula for i in itineraries if i.formula}),
-            "countries": sorted(
-                ((c, country_name_it(c)) for c in {c for i in itineraries
-                                                    for c in i.countries}),
-                key=lambda t: t[1]),
+            "areas": _pairs({a for i in itineraries for a in i.areas}),
+            "formulas": _pairs({i.formula for i in itineraries if i.formula}),
+            "countries": _country_pairs({c for i in itineraries for c in i.countries}),
         }
         return templates.TemplateResponse(request, "settings.html", ctx,
                                           status_code=status_code)
@@ -286,15 +293,15 @@ def create_app(
 
     @app.post("/digest/test")
     def digest_test():
-        subject, html, text, _count = pending_digest()
         try:
+            subject, html, text, _count = pending_digest()
             mailer.send(cfg.digest_to, "[PROVA] " + subject, "[PROVA]\n\n" + text, html)
         except Exception:
-            log.exception("test digest send failed")
+            log.exception("test digest failed")
             return RedirectResponse("/settings?prova=errore", status_code=303)
         return RedirectResponse("/settings?prova=ok", status_code=303)
 
-    @app.get("/health")
+    @app.api_route("/health", methods=["GET", "HEAD"])
     def health():
         snap = store.latest_ok_snapshot()
         return {"ok": True,

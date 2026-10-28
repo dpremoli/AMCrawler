@@ -50,7 +50,7 @@ def test_settings_save_filter_and_time(client, seeded_store, hook_calls):
     assert hook_calls == ["06:30"]
 
 
-@pytest.mark.parametrize("bad", ["7", "25:00", "", "6:30", "07:60"])
+@pytest.mark.parametrize("bad", ["7", "25:00", "", "6:30", "07:60", "０６:３０"])
 def test_settings_rejects_bad_send_time(client, seeded_store, hook_calls, bad):
     r = client.post("/settings", data={"formula": "Discovery", "send_time": bad})
     assert r.status_code == 400
@@ -137,3 +137,28 @@ def test_vendor_and_map_assets_served(client):
     for p in ("map.js", "vendor/d3.v7.9.0.min.js", "vendor/topojson-client.3.1.0.min.js",
               "vendor/countries-50m.json"):
         assert client.get("/static/" + p).status_code == 200
+
+
+def test_digest_test_render_error_redirects_not_500(client, monkeypatch):
+    def boom(*a, **k):
+        raise ValueError("render broke")
+
+    monkeypatch.setattr("amcrawler.web.render_digest", boom)
+    r = client.post("/digest/test")
+    assert r.status_code == 303
+    assert r.headers["location"] == "/settings?prova=errore"
+
+
+def test_settings_keeps_full_country_list_collapsed(client, seeded_store):
+    from tests.conftest import itin
+
+    seeded_store.save_catalogue([itin(id="i9", code="0009", countries=("NO",))], NOW)
+    html = client.get("/settings").text
+    assert 'value="NO"' in html  # no current Departure there, still selectable
+    assert "<details" in html and "<details open" not in html
+
+
+def test_settings_tools_come_before_filter_form(client):
+    html = client.get("/settings").text
+    for marker in ('name="send_time"', "Anteprima", "Invia prova"):
+        assert html.index(marker) < html.index("Filtro del Digest")

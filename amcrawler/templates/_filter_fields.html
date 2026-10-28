@@ -1,22 +1,14 @@
-<fieldset>
-  <legend>Area</legend>
-  {% for a in areas %}
-  <label class="check"><input type="checkbox" name="area" value="{{ a }}"{% if a in search.areas %} checked{% endif %}> {{ a }}</label>
+{% macro group(label, name, options, selected) %}
+<details class="group"{% if selected %} open{% endif %}>
+  <summary>{{ label }}{% if selected %} · {{ selected | length }} {{ 'selezionato' if selected | length == 1 else 'selezionati' }}{% endif %}</summary>
+  {% for value, text in options %}
+  <label class="check"><input type="checkbox" name="{{ name }}" value="{{ value }}"{% if value in selected %} checked{% endif %}> {{ text }}</label>
   {% endfor %}
-</fieldset>
-<fieldset>
-  <legend>Formula</legend>
-  {% for f in formulas %}
-  <label class="check"><input type="checkbox" name="formula" value="{{ f }}"{% if f in search.formulas %} checked{% endif %}> {{ f }}</label>
-  {% endfor %}
-</fieldset>
-<label class="field">Paesi
-  <select name="country" multiple size="6">
-    {% for code, name in countries %}
-    <option value="{{ code }}"{% if code in search.countries %} selected{% endif %}>{{ name }}</option>
-    {% endfor %}
-  </select>
-</label>
+</details>
+{% endmacro %}
+{{ group("Area", "area", areas, search.areas) }}
+{{ group("Paese", "country", countries, search.countries) }}
+{{ group("Formula", "formula", formulas, search.formulas) }}
 <div class="row">
   <label class="field">Partenza tra (giorni)
     <input type="number" inputmode="numeric" min="0" name="dfrom" value="{{ search.days_from if search.days_from is not none }}">

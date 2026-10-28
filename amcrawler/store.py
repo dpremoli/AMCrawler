@@ -177,6 +177,9 @@ class Store:
     def latest_ok_snapshot(self) -> SnapshotInfo | None:
         return self._newest_snapshot("WHERE ok = 1")
 
+    def latest_nonempty_ok_snapshot(self) -> SnapshotInfo | None:
+        return self._newest_snapshot("WHERE ok = 1 AND departure_count > 0")
+
     def rejected_since_last_ok(self, errors: tuple[str, ...]) -> list[SnapshotInfo]:
         """Snapshots rejected with one of `errors` since the last OK snapshot, newest first."""
         marks = ",".join("?" * len(errors))

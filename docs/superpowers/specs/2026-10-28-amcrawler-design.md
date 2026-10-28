@@ -196,7 +196,9 @@ previously_matching(b) = matches(b, digest_filter, today)
   *current* baseline's `snapshot_id`, so the baseline does not advance; when the API
   recovers the next Digest diffs against the pre-outage baseline and reports only the
   genuinely new Departures. The first-ever run with 0 Departures still records `baseline`
-  with that snapshot (accepted: there is nothing older to protect).
+  with that snapshot (accepted: there is nothing older to protect). The sanity guard
+  compares with the latest ok snapshot that has Departures, so a partial result after an
+  accepted empty one also needs the 24 h confirmation.
 - **First ever run** (no previous digest_run): record status `baseline`, send
   nothing. Avoids a 59-Departure first email.
 - Ordering: by `start_date`, then name.
@@ -239,10 +241,10 @@ Digest ran now. Same set drives the map's accent colour.
   count in `departure_count`. **Recovery:** the guard compares with the last ok snapshot,
   which stops advancing, so a genuine drop would be rejected forever; when the previous
   suspicious rejections form a **streak** (the trailing run of rejected snapshots since the
-  last ok snapshot whose counts are all within ±10 % of this one; exactly 0 for an empty
+  last ok snapshot (other failures, e.g. HTTP errors, are skipped) whose counts are all within ±10 % of this one; exactly 0 for an empty
   result) of at least `CONFIRM_SUSPICIOUS = 2` and **the oldest of them is at least
   `CONFIRM_SPAN = 24 h` old**, this result is accepted (ok=1) and a WARNING
-  "suspicious result confirmed over <h> h (3 crawls); accepting" is logged. (G1) The 24 h
+  "suspicious result confirmed over <h> h (<n> crawls); accepting" (n = streak + this crawl) is logged. (G1) The 24 h
   span means a broken API serving 200-OK empty or partial data for a few hours, or extra
   crawls from restarts/CLI, cannot be accepted; an inconsistent count in between restarts
   the streak from that point.

@@ -163,3 +163,21 @@ def test_catalogued_flag_round_trips(store):
     sid = store.record_snapshot(datetime(2026, 10, 28, tzinfo=timezone.utc),
                                 [dep(id="a", catalogued=False), dep(id="b")])
     assert {d.id: d.catalogued for d in store.snapshot_departures(sid)} == {"a": False, "b": True}
+
+
+def test_rejected_since_last_ok_filters_errors_and_stops_at_last_ok(store):
+    store.record_snapshot(STORE_NOW, None, "suspicious drop", fetched_count=1)  # before OK
+    store.record_snapshot(STORE_NOW + H, [dep()])
+    a = store.record_snapshot(STORE_NOW + 2 * H, None, "suspicious drop", fetched_count=10)
+    store.record_snapshot(STORE_NOW + 3 * H, None, "HTTP 503")
+    b = store.record_snapshot(STORE_NOW + 4 * H, None, "suspicious empty result")
+    got = store.rejected_since_last_ok(("suspicious empty result", "suspicious drop"))
+    assert [s.id for s in got] == [b, a]
+    assert got[1].departure_count == 10
+
+
+def test_latest_nonempty_ok_snapshot_skips_empty_ones(store):
+    full = store.record_snapshot(STORE_NOW, [dep()])
+    store.record_snapshot(STORE_NOW + H, [])
+    assert store.latest_ok_snapshot().id != full
+    assert store.latest_nonempty_ok_snapshot().id == full

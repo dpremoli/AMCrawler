@@ -346,9 +346,47 @@ def test_consistent_empty_results_spanning_24h_are_accepted(store):
 @respx.mock
 def test_inconsistent_drops_stay_rejected(store):
     _seed_previous(store)
-    oks = [_crawl_n(store, n, CRAWL_NOW + timedelta(hours=3 * k)).ok
-           for k, n in enumerate((10, 15, 10, 0, 0))]
-    assert oks == [False, False, False, False, False]
+    oks = [_crawl_n(store, n, CRAWL_NOW + timedelta(hours=12 * k)).ok
+           for k, n in enumerate((10, 15, 10, 0, 0, 10))]
+    assert oks == [False] * 6
+
+
+@respx.mock
+def test_one_old_rejection_is_not_enough(store):
+    _seed_previous(store)
+    _crawl_n(store, 10, CRAWL_NOW)
+    assert not _crawl_n(store, 10, CRAWL_NOW + timedelta(hours=30)).ok  # only 1 earlier
+
+
+@respx.mock
+def test_http_failure_in_the_middle_neither_breaks_nor_extends_the_streak(store):
+    _seed_previous(store)
+    _crawl_n(store, 10, CRAWL_NOW)
+    mock_bases()
+    respx.get(TOURS).mock(return_value=httpx.Response(503))
+    run_crawl(store, make_client(), CRAWL_NOW + timedelta(hours=12), pause=0)
+    assert not _crawl_n(store, 10, CRAWL_NOW + timedelta(hours=23)).ok
+    assert _crawl_n(store, 10, CRAWL_NOW + timedelta(hours=24)).ok  # streak: +0h, +23h
+
+
+@respx.mock
+def test_partial_recovery_after_accepted_empty_snapshot_does_not_flood(store, tmp_path):
+    from tests.conftest import FakeMailer
+
+    store.save_catalogue([itin()], CRAWL_NOW)
+    full = [dep(id=f"n{k}", code=f"2026-n{k}") for k in range(25)]
+    base = store.record_snapshot(CRAWL_NOW - timedelta(days=1), full)
+    store.record_digest_run(CRAWL_NOW - timedelta(days=1), base, "baseline", [])
+    store.record_snapshot(CRAWL_NOW, [])  # accepted empty snapshot
+    mailer = FakeMailer()
+    assert _digest_at(store, mailer, tmp_path, CRAWL_NOW + timedelta(hours=1)) == "empty"
+    assert store.baseline_snapshot_id() == base
+    # a partial result is still guarded
+    assert not _crawl_n(store, 5, CRAWL_NOW + timedelta(hours=2)).ok
+    assert not _crawl_n(store, 5, CRAWL_NOW + timedelta(hours=14)).ok
+    assert _crawl_n(store, 26, CRAWL_NOW + timedelta(hours=15)).ok  # full recovery + n25
+    assert _digest_at(store, mailer, tmp_path, CRAWL_NOW + timedelta(hours=30)) == "sent"
+    assert store.last_sent_entry_ids() == {"n25"}
 
 
 @respx.mock

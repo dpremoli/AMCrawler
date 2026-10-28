@@ -23,8 +23,9 @@ CONFIRM_SPAN = timedelta(hours=24)  # the agreeing rejections must reach back th
 SUSPICIOUS_ERRORS = ("suspicious empty result", "suspicious drop")
 
 
-def _confirmed(store: Store, count: int, now: datetime) -> timedelta | None:
-    """The span of the current streak when this suspicious result is confirmed, else None.
+def _confirmed(store: Store, count: int, now: datetime) -> tuple[timedelta, int] | None:
+    """(span, streak length) of the current streak when this suspicious result is confirmed,
+    else None.
 
     The streak is the trailing run of suspicious rejections since the last OK snapshot
     whose counts are all within CONFIRM_TOLERANCE of `count` (0 only matches 0). It confirms
@@ -38,7 +39,7 @@ def _confirmed(store: Store, count: int, now: datetime) -> timedelta | None:
     if len(streak) < CONFIRM_SUSPICIOUS:
         return None
     span = now - streak[-1].taken_at
-    return span if span >= CONFIRM_SPAN else None
+    return (span, len(streak)) if span >= CONFIRM_SPAN else None
 
 
 def _refresh_catalogue(store: Store, client: httpx.Client, now: datetime) -> None:
@@ -84,17 +85,19 @@ def run_crawl(store: Store, client: httpx.Client, now: datetime,
     departures = [d if d.itinerary_id in known else dataclasses.replace(d, catalogued=False)
                   for d in departures]
 
-    previous = store.latest_ok_snapshot()
+    # an accepted empty snapshot must not switch the guard off for a partial recovery
+    previous = store.latest_nonempty_ok_snapshot()
     if previous and previous.departure_count >= SANITY_MIN_PREVIOUS:
         reason = None
         if not departures:
             reason = "suspicious empty result"
         elif len(departures) < previous.departure_count * SANITY_MIN_RATIO:
             reason = "suspicious drop"
-        span = _confirmed(store, len(departures), now) if reason else None
-        if span is not None:
+        confirmed = _confirmed(store, len(departures), now) if reason else None
+        if confirmed is not None:
+            span, rejected = confirmed
             log.warning("suspicious result confirmed over %.1f h (%d crawls); accepting",
-                        span.total_seconds() / 3600, CONFIRM_SUSPICIOUS + 1)
+                        span.total_seconds() / 3600, rejected + 1)
             reason = None
         if reason:
             log.warning("crawl returned %d Departures but the previous snapshot had %d: %s",

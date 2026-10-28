@@ -34,7 +34,7 @@ def main(argv: list[str]) -> int:
         status = digest.run_digest(store, mailer, cfg, now)
         print(f"digest: {status}")
         # "stale" means the crawler has been failing, so it is an error too.
-        if status in ("failed", "stale"):
+        if status in digest.ERROR_STATUSES:
             return 1
     return 0
 

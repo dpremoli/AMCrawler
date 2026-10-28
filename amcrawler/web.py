@@ -7,7 +7,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
 from urllib.parse import parse_qsl, urlencode
-from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -18,21 +17,13 @@ from . import digest, filters
 from .auth import AccessVerifier, install_auth
 from .config import Config, load_config, parse_hhmm
 from .geo import country_name_it, iso_numeric
-from .labels import filter_parts, giorni, plural_it
-from .mailer import MailerNotConfigured, SmtpMailer, date_range, render_digest, truncate_notes
+from .labels import filter_parts, plural_it
+from .mailer import MailerNotConfigured, SmtpMailer, render_digest
 from .models import Filter
-from .source import itinerary_url
 from .store import SnapshotInfo, Store
+from .templating import env
 
 _PKG = Path(__file__).parent
-_BAD_DIGEST = ("failed", "stale")
-_RUN_LABELS = {
-    "sent": "Inviato",
-    "baseline": "Riferimento iniziale",
-    "empty": "Nessuna novità",
-    "failed": "Invio non riuscito",
-    "stale": "Dati non aggiornati",
-}
 log = logging.getLogger(__name__)
 
 def _href(pairs: list[tuple[str, str]], hidden_view: bool) -> str:
@@ -90,41 +81,34 @@ def create_app(
     app.state.cfg = cfg
     app.state.store = store
     app.state.mailer = mailer
-    app.state.now = now
-    app.state.on_send_time_change = lambda hhmm: None  # Task 11 reschedules here
+    app.state.on_send_time_change = lambda hhmm: None  # replaced when the scheduler starts
 
     verifier = None
     if cfg.cf_team_domain and cfg.cf_aud:
         verifier = AccessVerifier(cfg.cf_team_domain, cfg.cf_aud)
     install_auth(app, verifier, cfg.dev_no_auth)
 
-    templates = Jinja2Templates(directory=str(_PKG / "templates"))
-    templates.env.trim_blocks = True
-    templates.env.lstrip_blocks = True
-    templates.env.globals.update(
-        date_range=date_range, giorni=giorni, plural_it=plural_it, truncate_notes=truncate_notes,
-        country_name_it=country_name_it, itinerary_url=itinerary_url)
-    templates.env.filters["country_name_it"] = country_name_it
-    app.state.templates = templates
+    templates = Jinja2Templates(env=env)
 
     app.mount("/static", StaticFiles(directory=str(_PKG / "static")), name="static")
 
     def status_strip(last_ok: SnapshotInfo | None, shown: int, new: int) -> dict:
         latest = store.latest_snapshot()
         runs = store.recent_digest_runs(1)
-        digest_bad = bool(runs) and runs[0].status in _BAD_DIGEST
+        digest_bad = bool(runs) and runs[0].status in digest.ERROR_STATUSES
         crawl_bad = latest is not None and not latest.ok
         bad = crawl_bad or digest_bad
         if last_ok is None:
-            text = "Nessun aggiornamento riuscito"
+            parts = ["Nessun aggiornamento riuscito"]
         else:
-            at = last_ok.taken_at.astimezone(ZoneInfo(cfg.tz)).strftime("%H:%M")
-            text = (f"Aggiornato alle {at} · {plural_it(shown, 'partenza', 'partenze')}"
-                    f" · {plural_it(new, 'nuova', 'nuove')}")
+            at = digest.to_local(last_ok.taken_at, cfg.tz).strftime("%H:%M")
+            parts = [f"Aggiornato alle {at}", plural_it(shown, "partenza", "partenze"),
+                     plural_it(new, "nuova", "nuove")]
         if crawl_bad:
-            text += " · ultimo aggiornamento non riuscito"
+            parts.append("ultimo aggiornamento non riuscito")
         elif digest_bad:
-            text += " · ultimo Digest non riuscito"
+            parts.append("ultimo Digest non riuscito")
+        text = " · ".join(parts)
         return {"text": text, "bad": bad}
 
     @app.api_route("/", methods=["GET", "HEAD"])
@@ -202,10 +186,9 @@ def create_app(
     def settings_page(request: Request, flt: Filter, send_time: str,
                       error: str | None = None, status_code: int = 200):
         itineraries = list(store.itineraries().values())
-        tz = ZoneInfo(cfg.tz)
-        runs = [{"at": r.run_at.astimezone(tz).strftime("%d/%m/%Y %H:%M"),
-                 "label": _RUN_LABELS.get(r.status, r.status),
-                 "count": r.entry_count, "bad": r.status in _BAD_DIGEST}
+        runs = [{"at": digest.to_local(r.run_at, cfg.tz).strftime("%d/%m/%Y %H:%M"),
+                 "label": digest.STATUS_LABELS_IT.get(r.status, r.status),
+                 "count": r.entry_count, "bad": r.status in digest.ERROR_STATUSES}
                 for r in store.recent_digest_runs(10)]
         ctx = {
             "search": flt,

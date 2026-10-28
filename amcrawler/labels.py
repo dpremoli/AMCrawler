@@ -1,8 +1,21 @@
 """Italian wording shared by the web UI and the Digest email."""
 from __future__ import annotations
 
+from datetime import date
+
 from .geo import country_name_it
 from .models import Filter
+
+
+MONTHS_IT = ("gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic")
+
+
+def short_date(d: date) -> str:
+    return f"{d.day} {MONTHS_IT[d.month - 1]}"
+
+
+def date_range(start: date, end: date) -> str:
+    return f"{short_date(start)} – {short_date(end)}"
 
 
 def plural_it(n: int, one: str, many: str) -> str:

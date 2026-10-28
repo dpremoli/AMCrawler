@@ -11,10 +11,23 @@ from .models import Departure
 from .store import Store
 
 STALE_AFTER = timedelta(hours=24)
+# Digest run statuses that mean something is wrong (and the CLI exits non-zero)
+ERROR_STATUSES = frozenset({"failed", "stale"})
+STATUS_LABELS_IT = {
+    "sent": "Inviato",
+    "baseline": "Riferimento iniziale",
+    "empty": "Nessuna novità",
+    "failed": "Invio non riuscito",
+    "stale": "Dati non aggiornati",
+}
+
+
+def to_local(dt: datetime, tz: str) -> datetime:
+    return dt.astimezone(ZoneInfo(tz))
 
 
 def today_in(tz: str, now: datetime) -> date:
-    return now.astimezone(ZoneInfo(tz)).date()
+    return to_local(now, tz).date()
 
 
 def compute_new_entries(store: Store, today: date,

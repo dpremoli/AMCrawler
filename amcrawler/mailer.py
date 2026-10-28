@@ -6,30 +6,12 @@ import ssl
 from datetime import date
 from email.message import EmailMessage
 
-from jinja2 import Environment, PackageLoader, select_autoescape
-
 from .config import Config
 from .geo import country_name_it
-from .labels import describe_filter, giorni
+from .labels import date_range, describe_filter, giorni, short_date
 from .models import Departure, Filter
 from .source import itinerary_url
-
-MONTHS_IT = ("gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic")
-
-_env = Environment(
-    loader=PackageLoader("amcrawler", "templates"),
-    autoescape=select_autoescape(["html"]),
-    trim_blocks=True,
-    lstrip_blocks=True,
-)
-
-
-def short_date(d: date) -> str:
-    return f"{d.day} {MONTHS_IT[d.month - 1]}"
-
-
-def date_range(start: date, end: date) -> str:
-    return f"{short_date(start)} – {short_date(end)}"
+from .templating import env
 
 
 def subject_for(count: int, day: date) -> str:
@@ -70,14 +52,14 @@ def render_digest(
         "public_url": public_url,
         "filter_text": describe_filter(f),
     }
-    html = _env.get_template("email/digest.html").render(**ctx)
-    text = _env.get_template("email/digest.txt").render(**ctx)
+    html = env.get_template("email/digest.html").render(**ctx)
+    text = env.get_template("email/digest.txt").render(**ctx)
     return subject, html, text
 
 
 def render_stale(hours: int, last_error: str | None) -> tuple[str, str]:
     subject = f"AMCrawler: nessun aggiornamento da {hours} ore"
-    text = _env.get_template("email/stale.txt").render(hours=hours, last_error=last_error)
+    text = env.get_template("email/stale.txt").render(hours=hours, last_error=last_error)
     return subject, text
 
 

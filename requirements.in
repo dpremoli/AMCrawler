@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+jinja2
+httpx
+apscheduler<4
+pyjwt[crypto]
+pycountry
+python-multipart
+tzdata

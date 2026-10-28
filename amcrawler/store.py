@@ -117,6 +117,14 @@ class Store:
             row = conn.execute("SELECT MAX(fetched_at) AS t FROM itineraries").fetchone()
         return datetime.fromisoformat(row["t"]) if row["t"] else None
 
+    def catalogue_attempted_at(self) -> datetime | None:
+        """When a catalogue refresh was last tried (successful or not)."""
+        raw = self._get_setting("catalogue_attempted_at")
+        return datetime.fromisoformat(raw) if raw else None
+
+    def note_catalogue_attempt(self, at: datetime) -> None:
+        self._set_setting("catalogue_attempted_at", _ts(at))
+
     def itineraries(self) -> dict[str, Itinerary]:
         with self._conn() as conn:
             rows = conn.execute("SELECT * FROM itineraries").fetchall()

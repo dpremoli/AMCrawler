@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import logging
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Callable
 from urllib.parse import parse_qsl, urlencode
@@ -25,6 +25,7 @@ from .templating import env
 
 _PKG = Path(__file__).parent
 log = logging.getLogger(__name__)
+CATALOGUE_STALE_AFTER = timedelta(hours=72)
 
 def _href(pairs: list[tuple[str, str]], hidden_view: bool) -> str:
     if hidden_view:
@@ -97,17 +98,25 @@ def create_app(
         runs = store.recent_digest_runs(1)
         digest_bad = bool(runs) and runs[0].status in digest.ERROR_STATUSES
         crawl_bad = latest is not None and not latest.ok
-        bad = crawl_bad or digest_bad
+        catalogue_at = store.catalogue_fetched_at()
+        catalogue_bad = (last_ok is not None and catalogue_at is not None
+                         and now() - catalogue_at > CATALOGUE_STALE_AFTER)
+        bad = crawl_bad or digest_bad or catalogue_bad
         if last_ok is None:
             parts = ["Nessun aggiornamento riuscito"]
         else:
-            at = digest.to_local(last_ok.taken_at, cfg.tz).strftime("%H:%M")
-            parts = [f"Aggiornato alle {at}", plural_it(shown, "partenza", "partenze"),
+            taken = digest.to_local(last_ok.taken_at, cfg.tz)
+            when = taken.strftime("alle %H:%M")
+            if taken.date() != digest.today_in(cfg.tz, now()):
+                when = taken.strftime("il %d/%m alle %H:%M")
+            parts = [f"Aggiornato {when}", plural_it(shown, "partenza", "partenze"),
                      plural_it(new, "nuova", "nuove")]
         if crawl_bad:
             parts.append("ultimo aggiornamento non riuscito")
         elif digest_bad:
             parts.append("ultimo Digest non riuscito")
+        if catalogue_bad:
+            parts.append("catalogo non aggiornato")
         text = " · ".join(parts)
         return {"text": text, "bad": bad}
 

@@ -1,5 +1,6 @@
 import json
 import re
+from datetime import timedelta
 
 from amcrawler.source import itinerary_url
 from tests.conftest import NOW, dep, itin
@@ -186,3 +187,24 @@ def test_one_day_departure_card_and_chip_use_singular(app_client, store):
     card = html.split('data-id="x1"', 1)[1].split("</article>", 1)[0]
     assert "1 giorno ·" in card and "1 giorni" not in card
     assert "Durata massima 1 giorno" in html and "1 giorni" not in html
+
+
+def test_status_strip_red_when_catalogue_older_than_72h(client, seeded_store):
+    seeded_store.save_catalogue([itin()], NOW - timedelta(hours=73))
+    text = client.get("/").text
+    assert "status-bad" in text
+    assert "catalogo non aggiornato" in text
+
+
+def test_status_strip_ok_when_catalogue_within_72h(client, seeded_store):
+    seeded_store.save_catalogue([itin()], NOW - timedelta(hours=71))
+    text = client.get("/").text
+    assert "status-bad" not in text
+    assert "catalogo non aggiornato" not in text
+
+
+def test_status_strip_shows_date_when_last_ok_is_not_today(app_client, store):
+    store.save_catalogue([itin()], NOW)
+    store.record_snapshot(NOW - timedelta(hours=26), [dep()])
+    text = app_client(store=store).get("/").text
+    assert "Aggiornato il 27/10 alle 10:00" in text

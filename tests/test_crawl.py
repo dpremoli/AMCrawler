@@ -4,9 +4,12 @@ import httpx
 import pytest
 import respx
 
-from amcrawler.crawl import run_crawl
+from amcrawler import digest
+from amcrawler.crawl import UNKNOWN_ITINERARY_REFRESH, run_crawl
+from amcrawler.models import Filter
 from amcrawler.source import BASE_URL, make_client, parse_tours_page
-from tests.conftest import dep, itin, load_json, mock_bases
+from amcrawler.source import parse_catalogue
+from tests.conftest import TODAY, dep, itin, load_json, mock_bases, read_text
 
 CRAWL_NOW = datetime(2026, 10, 28, 6, 0, tzinfo=timezone.utc)
 TOURS = f"{BASE_URL}/api/operative/tours"
@@ -36,7 +39,8 @@ def test_crawl_records_ok_snapshot_and_catalogue(store):
 @respx.mock
 def test_crawl_skips_catalogue_when_fresh(store):
     _, bases = mock_ok()
-    store.save_catalogue([itin()], CRAWL_NOW - timedelta(hours=23))
+    full = parse_catalogue(read_text("bases_sample.js"))
+    store.save_catalogue(full, CRAWL_NOW - timedelta(hours=23))
     info = run_crawl(store, make_client(), CRAWL_NOW, pause=0)
     assert info.ok
     assert bases.call_count == 0
@@ -110,3 +114,64 @@ def test_crawl_empty_catalogue_keeps_old_one(store):
     assert info.ok
     assert store.catalogue_fetched_at() == old_fetched
     assert list(store.itineraries()) == ["old"]
+
+
+def _bases_text(*items):
+    import json
+
+    bases = [{"id": i, "code": i, "name": i, "tourleaderMode": "regular",
+              "category": {"name": "Adventure"}, "countries": [{"isoCode2": "TH"}],
+              "geographicAreas": [{"name": area, "ordinal": 1}]} for i, area in items]
+    return "var B = {bases: " + json.dumps(bases) + "};"
+
+
+def _tour(dep_id, itinerary_id):
+    return {"assignment": None, "id": dep_id, "code": f"2026-{dep_id}", "notes": "",
+            "duration": 12, "pax": 5, "paxMax": 15, "status": "open",
+            "startDate": "2026-12-01", "endDate": "2026-12-12",
+            "base": {"id": itinerary_id, "code": itinerary_id, "name": itinerary_id,
+                     "tourleaderMode": "regular", "category": {"name": "Adventure"}}}
+
+
+def _tours_payload(*tours):
+    return {"success": True, "data": {"maxResultsPerPage": 30, "results": list(tours)}}
+
+
+@respx.mock
+def test_new_itinerary_missing_from_catalogue_is_reported_same_day(store):
+    """F1: a Departure of an Itinerary the catalogue lags on must not be lost."""
+    store.set_digest_filter(Filter(areas=("Asia",)))
+    store.save_catalogue([itin(id="i1", areas=("Europa",))], CRAWL_NOW - timedelta(hours=2))
+    base = store.record_snapshot(CRAWL_NOW - timedelta(days=1),
+                                 [dep(id="a", itinerary_id="i1", areas=("Europa",))])
+    store.record_digest_run(CRAWL_NOW - timedelta(days=1), base, "baseline", [])
+    respx.get(TOURS).mock(return_value=httpx.Response(
+        200, json=_tours_payload(_tour("a", "i1"), _tour("b", "i2"))))
+    bases = mock_bases(_bases_text(("i1", "Europa"), ("i2", "Asia")))
+    info = run_crawl(store, make_client(), CRAWL_NOW, pause=0)
+    assert info.ok and bases.call_count == 1
+    assert "i2" in store.itineraries()
+    assert [d.id for d in digest.compute_new_entries(store, TODAY)] == ["b"]
+
+
+@respx.mock
+def test_unknown_itinerary_refresh_is_throttled(store):
+    store.save_catalogue([itin(id="i1")], CRAWL_NOW - timedelta(hours=2))
+    respx.get(TOURS).mock(return_value=httpx.Response(
+        200, json=_tours_payload(_tour("a", "i1"), _tour("b", "i2"))))
+    bases = mock_bases(_bases_text(("i1", "Europa")))  # i2 still unknown after refresh
+    run_crawl(store, make_client(), CRAWL_NOW, pause=0)
+    run_crawl(store, make_client(), CRAWL_NOW + timedelta(minutes=30), pause=0)
+    assert bases.call_count == 1
+    run_crawl(store, make_client(), CRAWL_NOW + UNKNOWN_ITINERARY_REFRESH
+              + timedelta(minutes=1), pause=0)
+    assert bases.call_count == 2
+
+
+@respx.mock
+def test_no_forced_refresh_when_catalogue_was_just_refreshed(store):
+    respx.get(TOURS).mock(return_value=httpx.Response(
+        200, json=_tours_payload(_tour("b", "i2"))))
+    bases = mock_bases(_bases_text(("i1", "Europa")))  # stale-triggered refresh lacks i2
+    run_crawl(store, make_client(), CRAWL_NOW, pause=0)
+    assert bases.call_count == 1

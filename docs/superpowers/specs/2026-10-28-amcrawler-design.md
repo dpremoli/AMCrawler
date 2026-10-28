@@ -195,7 +195,11 @@ Digest ran now. Same set drives the map's accent colour.
   Also once at startup if the last ok snapshot is older than 3 h.
 - Digest: daily at `send_time` (default `07:00`, editable in GUI; changing it
   reschedules both jobs live).
-- Catalogue refresh: inside the crawl, if `itineraries.fetched_at` is older than 24 h.
+- Catalogue refresh: inside the crawl, if `itineraries.fetched_at` is older than 24 h,
+  **or** (forced) if a fetched Departure belongs to an Itinerary the catalogue does not
+  know yet, at most once per hour (last attempt kept in `settings`). Without this a
+  new Itinerary has no Areas/Countries, fails an Area/Country Digest Filter, and is
+  never reported once the catalogue catches up.
 - APScheduler `coalesce=True`, `misfire_grace_time=3600`, `max_instances=1`.
 
 ## 8. Crawl and failure handling
@@ -206,6 +210,8 @@ Digest ran now. Same set drives the map's accent colour.
   snapshot had ≥ 10, record `ok=0, error='suspicious empty result'`. Protects the
   baseline from a broken API wiping the list.
 - Catalogue failure is non-fatal if a previous catalogue exists (logged, reused).
+  The GUI status strip turns red with "catalogo non aggiornato" when the catalogue
+  is older than 72 h.
 - **Digest when data is stale:** if the latest ok snapshot is older than 24 h at
   `send_time`, send a short warning email instead
   ("AMCrawler: nessun aggiornamento da N ore — ultimo errore: …"), record

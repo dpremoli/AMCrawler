@@ -1,0 +1,999 @@
+{
+ "success": true,
+ "data": {
+  "results": [
+   {
+    "assignment": null,
+    "base": {
+     "category": {
+      "id": "7w7bmzo6yc48p",
+      "name": "Discovery",
+      "ordinal": 2,
+      "slug": "discovery"
+     },
+     "code": "9650",
+     "duration": 16,
+     "id": "8ijn5wo6orkwp",
+     "name": "Giappone Discovery",
+     "status": "active",
+     "tourleaderMode": "regular"
+    },
+    "code": "2026-9866",
+    "createTs": "2026-02-11 11:16:51",
+    "departureCityCounters": [],
+    "duration": 16,
+    "endDate": "2026-11-23",
+    "id": "crqfj4ncgwhzp",
+    "notes": "",
+    "pax": 8,
+    "paxConfirm": null,
+    "paxMax": 15,
+    "startDate": "2026-11-08",
+    "status": "open",
+    "updateTs": "2026-10-26 09:55:20"
+   },
+   {
+    "assignment": null,
+    "base": {
+     "category": {
+      "id": "7w7bmzo6yc48p",
+      "name": "Discovery",
+      "ordinal": 2,
+      "slug": "discovery"
+     },
+     "code": "9780",
+     "duration": 17,
+     "id": "7gvfcyegvcz5j",
+     "name": "Perù Discovery",
+     "status": "active",
+     "tourleaderMode": "regular"
+    },
+    "code": "2026-8515",
+    "createTs": "2026-06-26 10:52:18",
+    "departureCityCounters": [],
+    "duration": 17,
+    "endDate": "2026-11-29",
+    "id": "gabocyv637t3i",
+    "notes": "",
+    "pax": 6,
+    "paxConfirm": null,
+    "paxMax": 15,
+    "startDate": "2026-11-13",
+    "status": "open",
+    "updateTs": "2026-10-20 12:27:53"
+   },
+   {
+    "assignment": null,
+    "base": {
+     "category": {
+      "id": "u4sczb5tq3alh",
+      "name": "Motoraid",
+      "ordinal": 7,
+      "slug": "motoraid"
+     },
+     "code": "8715",
+     "duration": 16,
+     "id": "43yzorma7rsqi",
+     "name": "Royal Nepal Raid",
+     "status": "active",
+     "tourleaderMode": "regular"
+    },
+    "code": "2026-5513",
+    "createTs": "2026-06-23 15:19:07",
+    "departureCityCounters": [],
+    "duration": 16,
+    "endDate": "2026-11-28",
+    "id": "h5inztzckf6hp",
+    "notes": "",
+    "pax": 3,
+    "paxConfirm": null,
+    "paxMax": 15,
+    "startDate": "2026-11-13",
+    "status": "open",
+    "updateTs": "2026-10-26 14:16:25"
+   },
+   {
+    "assignment": {
+     "id": "x",
+     "status": "active"
+    },
+    "base": {
+     "category": {
+      "id": "4tze3eelbxz4e",
+      "name": "Adventure",
+      "ordinal": 1,
+      "slug": "avventura"
+     },
+     "code": "2285",
+     "duration": 16,
+     "id": "yx3ocfusiuluj",
+     "name": "Seychelles Natura",
+     "status": "active",
+     "tourleaderMode": "regular"
+    },
+    "code": "2026-7001",
+    "createTs": "2026-06-24 12:43:01",
+    "departureCityCounters": [],
+    "duration": 16,
+    "endDate": "2026-11-28",
+    "id": "3c4jqp847lewh",
+    "notes": "",
+    "pax": 1,
+    "paxConfirm": null,
+    "paxMax": 15,
+    "startDate": "2026-11-13",
+    "status": "open",
+    "updateTs": "2026-10-10 18:16:23"
+   },
+   {
+    "assignment": null,
+    "base": {
+     "category": {
+      "id": "4tze3eelbxz4e",
+      "name": "Adventure",
+      "ordinal": 1,
+      "slug": "avventura"
+     },
+     "code": "4088",
+     "duration": 11,
+     "id": "xyf3xpnxvxf7o",
+     "name": "Ilha Formosa Taiwan",
+     "status": "active",
+     "tourleaderMode": "regular"
+    },
+    "code": "2026-4493",
+    "createTs": "2026-06-23 15:19:06",
+    "departureCityCounters": [],
+    "duration": 11,
+    "endDate": "2026-11-30",
+    "id": "z4d3638j7857p",
+    "notes": "",
+    "pax": 1,
+    "paxConfirm": null,
+    "paxMax": 15,
+    "startDate": "2026-11-20",
+    "status": "open",
+    "updateTs": "2026-10-21 14:46:23"
+   },
+   {
+    "assignment": null,
+    "base": {
+     "category": {
+      "id": "7w7bmzo6yc48p",
+      "name": "Discovery",
+      "ordinal": 2,
+      "slug": "discovery"
+     },
+     "code": "9357",
+     "duration": 7,
+     "id": "jsewhaqfnkznc",
+     "name": "Petra Wadi Rum Discovery",
+     "status": "active",
+     "tourleaderMode": "regular"
+    },
+    "code": "2026-2382",
+    "createTs": "2026-06-22 16:35:29",
+    "departureCityCounters": [],
+    "duration": 7,
+    "endDate": "2026-11-26",
+    "id": "pgzz8uikysg6m",
+    "notes": "",
+    "pax": 1,
+    "paxConfirm": null,
+    "paxMax": 15,
+    "startDate": "2026-11-20",
+    "status": "open",
+    "updateTs": "2026-10-27 09:31:23"
+   },
+   {
+    "assignment": null,
+    "base": {
+     "category": {
+      "id": "4tze3eelbxz4e",
+      "name": "Adventure",
+      "ordinal": 1,
+      "slug": "avventura"
+     },
+     "code": "0256",
+     "duration": 9,
+     "id": "lsnpu6oinudbh",
+     "name": "Portogallo del Nord e Galizia",
+     "status": "active",
+     "tourleaderMode": "regular"
+    },
+    "code": "2026-0622",
+    "createTs": "2026-06-22 16:35:23",
+    "departureCityCounters": [],
+    "duration": 9,
+    "endDate": "2026-11-28",
+    "id": "u7d73tkx6mq5i",
+    "notes": "",
+    "pax": 1,
+    "paxConfirm": null,
+    "paxMax": 11,
+    "startDate": "2026-11-20",
+    "status": "open",
+    "updateTs": "2026-10-15 10:16:25"
+   },
+   {
+    "assignment": null,
+    "base": {
+     "category": {
+      "id": "4tze3eelbxz4e",
+      "name": "Adventure",
+      "ordinal": 1,
+      "slug": "avventura"
+     },
+     "code": "1350",
+     "duration": 11,
+     "id": "kb8z75gqgolin",
+     "name": "Egitto",
+     "status": "active",
+     "tourleaderMode": "regular"
+    },
+    "code": "2026-2426",
+    "createTs": "2026-06-22 16:35:26",
+    "departureCityCounters": [],
+    "duration": 11,
+    "endDate": "2026-12-01",
+    "id": "deln8kykzccda",
+    "notes": "",
+    "pax": 1,
+    "paxConfirm": null,
+    "paxMax": 15,
+    "startDate": "2026-11-21",
+    "status": "open",
+    "updateTs": "2026-10-27 09:16:23"
+   },
+   {
+    "assignment": null,
+    "base": {
+     "category": {
+      "id": "7w7bmzo6yc48p",
+      "name": "Discovery",
+      "ordinal": 2,
+      "slug": "discovery"
+     },
+     "code": "9764",
+     "duration": 17,
+     "id": "4rtw5vajmf47j",
+     "name": "Bolivia Cile Discovery",
+     "status": "active",
+     "tourleaderMode": "regular"
+    },
+    "code": "2026-8822",
+    "createTs": "2026-06-26 10:52:18",
+    "departureCityCounters": [],
+    "duration": 17,
+    "endDate": "2026-12-13",
+    "id": "dbjzcv8irnd6n",
+    "notes": "",
+    "pax": 1,
+    "paxConfirm": null,
+    "paxMax": 15,
+    "startDate": "2026-11-27",
+    "status": "open",
+    "updateTs": "2026-10-28 09:46:23"
+   },
+   {
+    "assignment": null,
+    "base": {
+     "category": {
+      "id": "7w7bmzo6yc48p",
+      "name": "Discovery",
+      "ordinal": 2,
+      "slug": "discovery"
+     },
+     "code": "9713",
+     "duration": 17,
+     "id": "gjsvaxecfasxp",
+     "name": "Guatemala Belize Discovery",
+     "status": "active",
+     "tourleaderMode": "regular"
+    },
+    "code": "2026-0382",
+    "createTs": "2026-09-15 17:16:19",
+    "departureCityCounters": [],
+    "duration": 17,
+    "endDate": "2026-12-13",
+    "id": "xhty86njm4cen",
+    "notes": "",
+    "pax": 1,
+    "paxConfirm": null,
+    "paxMax": 15,
+    "startDate": "2026-11-27",
+    "status": "open",
+    "updateTs": "2026-10-22 10:46:24"
+   },
+   {
+    "assignment": null,
+    "base": {
+     "category": {
+      "id": "7w7bmzo6yc48p",
+      "name": "Discovery",
+      "ordinal": 2,
+      "slug": "discovery"
+     },
+     "code": "9644",
+     "duration": 10,
+     "id": "4c8tjjqjeuy6k",
+     "name": "Giappone Express Discovery",
+     "status": "active",
+     "tourleaderMode": "regular"
+    },
+    "code": "2026-9728",
+    "createTs": "2026-01-20 15:01:49",
+    "departureCityCounters": [],
+    "duration": 10,
+    "endDate": "2026-12-08",
+    "id": "hyxby4yhvihke",
+    "notes": "",
+    "pax": 1,
+    "paxConfirm": null,
+    "paxMax": 15,
+    "startDate": "2026-11-29",
+    "status": "open",
+    "updateTs": "2026-10-22 10:46:24"
+   },
+   {
+    "assignment": null,
+    "base": {
+     "category": {
+      "id": "7w7bmzo6yc48p",
+      "name": "Discovery",
+      "ordinal": 2,
+      "slug": "discovery"
+     },
+     "code": "9693",
+     "duration": 23,
+     "id": "cfmqq6ezixw4j",
+     "name": "Tutto Messico Discovery",
+     "status": "active",
+     "tourleaderMode": "regular"
+    },
+    "code": "2026-1158",
+    "createTs": "2026-07-02 15:31:20",
+    "departureCityCounters": [],
+    "duration": 23,
+    "endDate": "2026-12-23",
+    "id": "myi5degs6p8ie",
+    "notes": "",
+    "pax": 1,
+    "paxConfirm": null,
+    "paxMax": 15,
+    "startDate": "2026-12-01",
+    "status": "open",
+    "updateTs": "2026-10-18 18:01:24"
+   },
+   {
+    "assignment": null,
+    "base": {
+     "category": {
+      "id": "4tze3eelbxz4e",
+      "name": "Adventure",
+      "ordinal": 1,
+      "slug": "avventura"
+     },
+     "code": "5220",
+     "duration": 10,
+     "id": "fcwndy75czyvo",
+     "name": "Bahamas Mare",
+     "status": "active",
+     "tourleaderMode": "regular"
+    },
+    "code": "2026-1145",
+    "createTs": "2026-07-02 15:31:19",
+    "departureCityCounters": [],
+    "duration": 10,
+    "endDate": "2026-12-12",
+    "id": "wz4trpi5tpktn",
+    "notes": "",
+    "pax": 1,
+    "paxConfirm": null,
+    "paxMax": 15,
+    "startDate": "2026-12-03",
+    "status": "open",
+    "updateTs": "2026-10-20 13:01:27"
+   },
+   {
+    "assignment": null,
+    "base": {
+     "category": {
+      "id": "xdcicafilbyna",
+      "name": "Family",
+      "ordinal": 4,
+      "slug": "family"
+     },
+     "code": "6512",
+     "duration": 8,
+     "id": "yuwsfpusyl7on",
+     "name": "Marrakech Family",
+     "status": "active",
+     "tourleaderMode": "regular"
+    },
+    "code": "2026-0242",
+    "createTs": "2026-10-20 13:06:46",
+    "departureCityCounters": [],
+    "duration": 8,
+    "endDate": "2026-12-12",
+    "id": "rvukq67yd4ufi",
+    "notes": "Età dei figli: 3 e 8 anni",
+    "pax": 3,
+    "paxConfirm": null,
+    "paxMax": 15,
+    "startDate": "2026-12-05",
+    "status": "open",
+    "updateTs": "2026-10-21 14:46:23"
+   },
+   {
+    "assignment": null,
+    "base": {
+     "category": {
+      "id": "4tze3eelbxz4e",
+      "name": "Adventure",
+      "ordinal": 1,
+      "slug": "avventura"
+     },
+     "code": "0520",
+     "duration": 16,
+     "id": "aecxe3wiz8qdd",
+     "name": "Scozia",
+     "status": "active",
+     "tourleaderMode": "regular"
+    },
+    "code": "2026-3632",
+    "createTs": "2026-06-22 16:35:24",
+    "departureCityCounters": [],
+    "duration": 16,
+    "endDate": "2026-12-21",
+    "id": "n7b46l7ilvfjm",
+    "notes": "",
+    "pax": 1,
+    "paxConfirm": null,
+    "paxMax": 11,
+    "startDate": "2026-12-06",
+    "status": "open",
+    "updateTs": "2026-08-28 11:16:19"
+   },
+   {
+    "assignment": null,
+    "base": {
+     "category": {
+      "id": "6jk7u5wdfjvxb",
+      "name": "Trekking",
+      "ordinal": 5,
+      "slug": "trekking"
+     },
+     "code": "7107",
+     "duration": 11,
+     "id": "7gizhupvb8xcg",
+     "name": "Dayirat Trek Marocco",
+     "status": "active",
+     "tourleaderMode": "regular"
+    },
+    "code": "2026-3190",
+    "createTs": "2026-06-22 16:35:27",
+    "departureCityCounters": [],
+    "duration": 11,
+    "endDate": "2026-12-19",
+    "id": "sxduh5jawf3um",
+    "notes": "",
+    "pax": 1,
+    "paxConfirm": null,
+    "paxMax": 15,
+    "startDate": "2026-12-09",
+    "status": "open",
+    "updateTs": "2026-10-14 16:31:23"
+   },
+   {
+    "assignment": null,
+    "base": {
+     "category": {
+      "id": "4tze3eelbxz4e",
+      "name": "Adventure",
+      "ordinal": 1,
+      "slug": "avventura"
+     },
+     "code": "1300",
+     "duration": 15,
+     "id": "ix7vquvk44roe",
+     "name": "Egitto Mar Rosso",
+     "status": "active",
+     "tourleaderMode": "regular"
+    },
+    "code": "2026-2397",
+    "createTs": "2026-06-22 16:35:26",
+    "departureCityCounters": [],
+    "duration": 15,
+    "endDate": "2026-12-27",
+    "id": "n5gaaeiplno3m",
+    "notes": "",
+    "pax": 1,
+    "paxConfirm": null,
+    "paxMax": 15,
+    "startDate": "2026-12-13",
+    "status": "open",
+    "updateTs": "2026-10-09 10:16:23"
+   },
+   {
+    "assignment": null,
+    "base": {
+     "category": {
+      "id": "4tze3eelbxz4e",
+      "name": "Adventure",
+      "ordinal": 1,
+      "slug": "avventura"
+     },
+     "code": "6181",
+     "duration": 17,
+     "id": "hgadsuou86lde",
+     "name": "Micronesia Palau",
+     "status": "active",
+     "tourleaderMode": "regular"
+    },
+    "code": "2026-2027",
+    "createTs": "2026-07-13 11:38:41",
+    "departureCityCounters": [
+     {
+      "counter": 9,
+      "departureCity": "RM",
+      "id": "amh5jwbdummgm"
+     }
+    ],
+    "duration": 19,
+    "endDate": "2027-01-03",
+    "id": "fdk8eyvfuukhc",
+    "notes": "",
+    "pax": 2,
+    "paxConfirm": null,
+    "paxMax": 9,
+    "startDate": "2026-12-16",
+    "status": "open",
+    "updateTs": "2026-10-12 12:01:28"
+   },
+   {
+    "assignment": null,
+    "base": {
+     "category": {
+      "id": "xdcicafilbyna",
+      "name": "Family",
+      "ordinal": 4,
+      "slug": "family"
+     },
+     "code": "6549",
+     "duration": 17,
+     "id": "kfeztyeqtoruf",
+     "name": "Thai Family",
+     "status": "active",
+     "tourleaderMode": "regular"
+    },
+    "code": "2026-9296",
+    "createTs": "2026-07-29 10:49:44",
+    "departureCityCounters": [
+     {
+      "counter": 0,
+      "departureCity": "MI",
+      "id": "v35erdzj8avbg"
+     },
+     {
+      "counter": 4,
+      "departureCity": "RM",
+      "id": "euaouhqjgmz4b"
+     }
+    ],
+    "duration": 18,
+    "endDate": "2027-01-05",
+    "id": "433khrlshozpp",
+    "notes": "Età minori: 8, 10, 12, 14 anni",
+    "pax": 11,
+    "paxConfirm": null,
+    "paxMax": 19,
+    "startDate": "2026-12-19",
+    "status": "open",
+    "updateTs": "2026-10-23 10:46:23"
+   },
+   {
+    "assignment": null,
+    "base": {
+     "category": {
+      "id": "7w7bmzo6yc48p",
+      "name": "Discovery",
+      "ordinal": 2,
+      "slug": "discovery"
+     },
+     "code": "9495",
+     "duration": 17,
+     "id": "rurexr56avfnd",
+     "name": "Tutto Rajasthan Discovery",
+     "status": "active",
+     "tourleaderMode": "regular"
+    },
+    "code": "2026-4830",
+    "createTs": "2026-10-27 11:18:55",
+    "departureCityCounters": [],
+    "duration": 17,
+    "endDate": "2027-01-05",
+    "id": "i8os3neheeyxn",
+    "notes": "",
+    "pax": 3,
+    "paxConfirm": null,
+    "paxMax": 15,
+    "startDate": "2026-12-20",
+    "status": "open",
+    "updateTs": "2026-10-27 18:31:23"
+   },
+   {
+    "assignment": null,
+    "base": {
+     "category": {
+      "id": "4tze3eelbxz4e",
+      "name": "Adventure",
+      "ordinal": 1,
+      "slug": "avventura"
+     },
+     "code": "0920",
+     "duration": 15,
+     "id": "swlt7chkmcgvo",
+     "name": "Tutto Giordania",
+     "status": "active",
+     "tourleaderMode": "regular"
+    },
+    "code": "2026-9128",
+    "createTs": "2026-07-09 15:51:36",
+    "departureCityCounters": [],
+    "duration": 15,
+    "endDate": "2027-01-06",
+    "id": "uxtk4zammyzhn",
+    "notes": "",
+    "pax": 1,
+    "paxConfirm": null,
+    "paxMax": 15,
+    "startDate": "2026-12-23",
+    "status": "open",
+    "updateTs": "2026-10-22 15:16:24"
+   },
+   {
+    "assignment": null,
+    "base": {
+     "category": {
+      "id": "4tze3eelbxz4e",
+      "name": "Adventure",
+      "ordinal": 1,
+      "slug": "avventura"
+     },
+     "code": "5630",
+     "duration": 12,
+     "id": "jarbsk54xhcgk",
+     "name": "Brasile Express",
+     "status": "active",
+     "tourleaderMode": "regular"
+    },
+    "code": "2026-0438",
+    "createTs": "2026-10-13 13:16:43",
+    "departureCityCounters": [
+     {
+      "counter": 7,
+      "departureCity": "RM",
+      "id": "pgfypzqljg7bm"
+     },
+     {
+      "counter": 6,
+      "departureCity": "MI",
+      "id": "r5kjg3a5qiy5m"
+     }
+    ],
+    "duration": 12,
+    "endDate": "2027-01-06",
+    "id": "n7dhe53i4ozye",
+    "notes": "ulteriore supplemento quota eur 250.",
+    "pax": 1,
+    "paxConfirm": null,
+    "paxMax": 14,
+    "startDate": "2026-12-26",
+    "status": "open",
+    "updateTs": "2026-10-27 12:31:25"
+   },
+   {
+    "assignment": null,
+    "base": {
+     "category": {
+      "id": "4tze3eelbxz4e",
+      "name": "Adventure",
+      "ordinal": 1,
+      "slug": "avventura"
+     },
+     "code": "0575",
+     "duration": 8,
+     "id": "pcf8wbnvx4wtg",
+     "name": "Fascino della Baviera",
+     "status": "active",
+     "tourleaderMode": "regular"
+    },
+    "code": "2026-3084",
+    "createTs": "2026-07-24 12:30:58",
+    "departureCityCounters": [],
+    "duration": 8,
+    "endDate": "2027-01-02",
+    "id": "y7qwbenreue6f",
+    "notes": "",
+    "pax": 1,
+    "paxConfirm": null,
+    "paxMax": 15,
+    "startDate": "2026-12-26",
+    "status": "open",
+    "updateTs": "2026-10-28 15:16:25"
+   },
+   {
+    "assignment": null,
+    "base": {
+     "category": {
+      "id": "4tze3eelbxz4e",
+      "name": "Adventure",
+      "ordinal": 1,
+      "slug": "avventura"
+     },
+     "code": "0280",
+     "duration": 11,
+     "id": "3j3ixyhywopyo",
+     "name": "Portogallo Express",
+     "status": "active",
+     "tourleaderMode": "regular"
+    },
+    "code": "2026-2776",
+    "createTs": "2026-07-24 12:30:58",
+    "departureCityCounters": [],
+    "duration": 11,
+    "endDate": "2027-01-05",
+    "id": "8isk4ruhhgilh",
+    "notes": "",
+    "pax": 1,
+    "paxConfirm": null,
+    "paxMax": 11,
+    "startDate": "2026-12-26",
+    "status": "open",
+    "updateTs": "2026-10-27 10:01:29"
+   },
+   {
+    "assignment": null,
+    "base": {
+     "category": {
+      "id": "4tze3eelbxz4e",
+      "name": "Adventure",
+      "ordinal": 1,
+      "slug": "avventura"
+     },
+     "code": "2106",
+     "duration": 11,
+     "id": "fokuvj8555pug",
+     "name": "Dancalia Express",
+     "status": "active",
+     "tourleaderMode": "regular"
+    },
+    "code": "2026-6944",
+    "createTs": "2026-07-09 15:51:37",
+    "departureCityCounters": [
+     {
+      "counter": 5,
+      "departureCity": "MI",
+      "id": "r8vneiurj4ujp"
+     },
+     {
+      "counter": 8,
+      "departureCity": "RM",
+      "id": "itkpa583ilaji"
+     }
+    ],
+    "duration": 11,
+    "endDate": "2027-01-06",
+    "id": "xfr4jthxtfl7b",
+    "notes": "",
+    "pax": 2,
+    "paxConfirm": null,
+    "paxMax": 15,
+    "startDate": "2026-12-27",
+    "status": "open",
+    "updateTs": "2026-10-18 14:46:22"
+   },
+   {
+    "assignment": null,
+    "base": {
+     "category": {
+      "id": "4tze3eelbxz4e",
+      "name": "Adventure",
+      "ordinal": 1,
+      "slug": "avventura"
+     },
+     "code": "2106",
+     "duration": 11,
+     "id": "fokuvj8555pug",
+     "name": "Dancalia Express",
+     "status": "active",
+     "tourleaderMode": "regular"
+    },
+    "code": "2026-1193",
+    "createTs": "2026-07-09 15:51:37",
+    "departureCityCounters": [
+     {
+      "counter": 6,
+      "departureCity": "MI",
+      "id": "pqnfwfeb7kyhl"
+     },
+     {
+      "counter": 6,
+      "departureCity": "RM",
+      "id": "sjvrktmmazdnc"
+     }
+    ],
+    "duration": 11,
+    "endDate": "2027-01-06",
+    "id": "fscwzgxmzrkba",
+    "notes": "",
+    "pax": 1,
+    "paxConfirm": null,
+    "paxMax": 14,
+    "startDate": "2026-12-27",
+    "status": "open",
+    "updateTs": "2026-10-26 11:01:30"
+   },
+   {
+    "assignment": null,
+    "base": {
+     "category": {
+      "id": "xdcicafilbyna",
+      "name": "Family",
+      "ordinal": 4,
+      "slug": "family"
+     },
+     "code": "6607",
+     "duration": 10,
+     "id": "4j8kiwa6fqhgj",
+     "name": "Garden Route Family",
+     "status": "active",
+     "tourleaderMode": "regular"
+    },
+    "code": "2026-4836",
+    "createTs": "2026-10-27 14:50:19",
+    "departureCityCounters": [
+     {
+      "counter": 5,
+      "departureCity": "RM",
+      "id": "pe8lgziftvrzg"
+     },
+     {
+      "counter": 2,
+      "departureCity": "MI",
+      "id": "bijjzs4ibglof"
+     }
+    ],
+    "duration": 10,
+    "endDate": "2027-01-05",
+    "id": "jzspgu5yspyjp",
+    "notes": "viaggio con ulteriore supplemento eur 200 .",
+    "pax": 3,
+    "paxConfirm": null,
+    "paxMax": 10,
+    "startDate": "2026-12-27",
+    "status": "open",
+    "updateTs": "2026-10-28 12:31:25"
+   },
+   {
+    "assignment": null,
+    "base": {
+     "category": {
+      "id": "xdcicafilbyna",
+      "name": "Family",
+      "ordinal": 4,
+      "slug": "family"
+     },
+     "code": "6512",
+     "duration": 8,
+     "id": "yuwsfpusyl7on",
+     "name": "Marrakech Family",
+     "status": "active",
+     "tourleaderMode": "regular"
+    },
+    "code": "2026-3919",
+    "createTs": "2026-07-24 12:40:03",
+    "departureCityCounters": [
+     {
+      "counter": 2,
+      "departureCity": "MI",
+      "id": "nl5edmvcvyfko"
+     },
+     {
+      "counter": 2,
+      "departureCity": "RM",
+      "id": "ecn4b78wn4pdb"
+     },
+     {
+      "counter": 0,
+      "departureCity": "BO",
+      "id": "rd8evig75zqzk"
+     }
+    ],
+    "duration": 8,
+    "endDate": "2027-01-03",
+    "id": "43twtigi6szwd",
+    "notes": "Età dei figli: 5, 8, 9, 10 anni",
+    "pax": 10,
+    "paxConfirm": null,
+    "paxMax": 14,
+    "startDate": "2026-12-27",
+    "status": "open",
+    "updateTs": "2026-10-21 14:31:24"
+   },
+   {
+    "assignment": null,
+    "base": {
+     "category": {
+      "id": "xdcicafilbyna",
+      "name": "Family",
+      "ordinal": 4,
+      "slug": "family"
+     },
+     "code": "6607",
+     "duration": 10,
+     "id": "4j8kiwa6fqhgj",
+     "name": "Garden Route Family",
+     "status": "active",
+     "tourleaderMode": "regular"
+    },
+    "code": "2026-0761",
+    "createTs": "2026-10-22 10:26:47",
+    "departureCityCounters": [
+     {
+      "counter": 2,
+      "departureCity": "RM",
+      "id": "z7vpo88z6zgej"
+     },
+     {
+      "counter": 4,
+      "departureCity": "MI",
+      "id": "dfwkb6mml5qeg"
+     }
+    ],
+    "duration": 10,
+    "endDate": "2027-01-06",
+    "id": "rgvw8icigof7f",
+    "notes": "viaggio con ulteriore supplemento eur 180 . ETA DEI MINORI: 6, 12 e 16 ANNI",
+    "pax": 5,
+    "paxConfirm": null,
+    "paxMax": 11,
+    "startDate": "2026-12-28",
+    "status": "open",
+    "updateTs": "2026-10-27 18:31:23"
+   },
+   {
+    "assignment": null,
+    "base": {
+     "category": {
+      "id": "7w7bmzo6yc48p",
+      "name": "Discovery",
+      "ordinal": 2,
+      "slug": "discovery"
+     },
+     "code": "9297",
+     "duration": 9,
+     "id": "4t3qf3f5lpi4h",
+     "name": "Andalusia Express Discovery",
+     "status": "active",
+     "tourleaderMode": "regular"
+    },
+    "code": "2026-3057",
+    "createTs": "2026-07-24 12:30:58",
+    "departureCityCounters": [],
+    "duration": 9,
+    "endDate": "2027-01-06",
+    "id": "duwdnhvkrmqao",
+    "notes": "",
+    "pax": 3,
+    "paxConfirm": null,
+    "paxMax": 15,
+    "startDate": "2026-12-29",
+    "status": "open",
+    "updateTs": "2026-10-27 17:01:28"
+   }
+  ],
+  "maxResultsPerPage": 30
+ }
+}

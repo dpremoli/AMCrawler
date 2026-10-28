@@ -1,0 +1,181 @@
+{
+ "success": true,
+ "data": {
+  "results": [
+   {
+    "assignment": null,
+    "base": {
+     "category": {
+      "id": "4tze3eelbxz4e",
+      "name": "Adventure",
+      "ordinal": 1,
+      "slug": "avventura"
+     },
+     "code": "1530",
+     "duration": 4,
+     "id": "cwwyllgssdwil",
+     "name": "Marrakech Break",
+     "status": "active",
+     "tourleaderMode": "regular"
+    },
+    "code": "2026-3716",
+    "createTs": "2026-07-24 12:40:03",
+    "departureCityCounters": [],
+    "duration": 4,
+    "endDate": "2027-01-02",
+    "id": "siwqehne3uone",
+    "notes": "",
+    "pax": 2,
+    "paxConfirm": null,
+    "paxMax": 15,
+    "startDate": "2026-12-30",
+    "status": "open",
+    "updateTs": "2026-10-28 09:31:29"
+   },
+   {
+    "assignment": null,
+    "base": {
+     "category": {
+      "id": "4tze3eelbxz4e",
+      "name": "Adventure",
+      "ordinal": 1,
+      "slug": "avventura"
+     },
+     "code": "1505",
+     "duration": 7,
+     "id": "5rcri8w3cp4nb",
+     "name": "Tunisia Desert",
+     "status": "active",
+     "tourleaderMode": "regular"
+    },
+    "code": "2026-9031",
+    "createTs": "2026-07-09 15:51:37",
+    "departureCityCounters": [
+     {
+      "counter": 14,
+      "departureCity": "MI",
+      "id": "gh58fcsahtycm"
+     }
+    ],
+    "duration": 7,
+    "endDate": "2027-01-05",
+    "id": "a8niswbj8vsnp",
+    "notes": "",
+    "pax": 1,
+    "paxConfirm": null,
+    "paxMax": 15,
+    "startDate": "2026-12-30",
+    "status": "open",
+    "updateTs": "2026-10-07 12:31:20"
+   },
+   {
+    "assignment": null,
+    "base": {
+     "category": {
+      "id": "4tze3eelbxz4e",
+      "name": "Adventure",
+      "ordinal": 1,
+      "slug": "avventura"
+     },
+     "code": "1550",
+     "duration": 8,
+     "id": "g3hp7hecpewln",
+     "name": "Marrakech Soft",
+     "status": "active",
+     "tourleaderMode": "regular"
+    },
+    "code": "2026-4322",
+    "createTs": "2026-07-24 12:40:04",
+    "departureCityCounters": [
+     {
+      "counter": 14,
+      "departureCity": "BG",
+      "id": "mjzttn8muekeo"
+     }
+    ],
+    "duration": 8,
+    "endDate": "2027-01-07",
+    "id": "gzr8atmkbhnzf",
+    "notes": "",
+    "pax": 1,
+    "paxConfirm": null,
+    "paxMax": 15,
+    "startDate": "2026-12-31",
+    "status": "open",
+    "updateTs": "2026-10-28 10:16:24"
+   },
+   {
+    "assignment": null,
+    "base": {
+     "category": {
+      "id": "4tze3eelbxz4e",
+      "name": "Adventure",
+      "ordinal": 1,
+      "slug": "avventura"
+     },
+     "code": "0435",
+     "duration": 8,
+     "id": "3ia7beey7c5bk",
+     "name": "Finlandia Aurore Boreali",
+     "status": "active",
+     "tourleaderMode": "regular"
+    },
+    "code": "2026-0262",
+    "createTs": "2026-10-26 11:08:46",
+    "departureCityCounters": [],
+    "duration": 8,
+    "endDate": "2027-01-09",
+    "id": "mzamo3zgrcpyp",
+    "notes": "",
+    "pax": 1,
+    "paxConfirm": null,
+    "paxMax": 15,
+    "startDate": "2027-01-02",
+    "status": "open",
+    "updateTs": "2026-10-26 15:16:24"
+   },
+   {
+    "assignment": null,
+    "base": {
+     "category": {
+      "id": "7w7bmzo6yc48p",
+      "name": "Discovery",
+      "ordinal": 2,
+      "slug": "discovery"
+     },
+     "code": "9304",
+     "duration": 8,
+     "id": "hkwu37pker3qd",
+     "name": "Islanda Aurore Boreali Discovery",
+     "status": "active",
+     "tourleaderMode": "regular"
+    },
+    "code": "2026-2799",
+    "createTs": "2026-08-05 10:34:04",
+    "departureCityCounters": [
+     {
+      "counter": 9,
+      "departureCity": "MI",
+      "id": "nbku8z7i3zkoj"
+     },
+     {
+      "counter": 6,
+      "departureCity": "RM",
+      "id": "uqrequwu8hkao"
+     }
+    ],
+    "duration": 9,
+    "endDate": "2027-01-10",
+    "id": "lnv3vyocchdeo",
+    "notes": "Notte a Copenhagen al rientro.",
+    "pax": 1,
+    "paxConfirm": null,
+    "paxMax": 16,
+    "startDate": "2027-01-02",
+    "status": "open",
+    "updateTs": "2026-10-27 15:01:26"
+   }
+  ],
+  "maxResultsPerPage": 30
+ }
+}

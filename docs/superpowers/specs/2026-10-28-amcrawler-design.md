@@ -343,8 +343,18 @@ Tap targets ≥ 44 px. System font stack. Light and dark via
 
 ### Main view `/`
 
-- **Top bar:** title, `Lista | Mappa` segmented toggle (phone only), filter button
-  opening a bottom sheet with the Search form, settings icon.
+- **Top bar:** title, `Lista | Mappa | Calendario` segmented toggle, filter button
+  opening a bottom sheet with the Search form, settings icon. The chosen view is
+  remembered per device (`localStorage`). On a phone one view shows at a time; on
+  desktop the list is always on the left, so "Lista" is hidden and the right column
+  shows the map or the calendar.
+- **Calendar view:** built in the browser (`static/calendar.js`) from the cards'
+  `data-start` dates, so it follows Search and Hidden exactly. Monday-first month grid
+  with a dot (or the count when several) on days with Departures; tapping a day makes
+  the list show only that day's cards. Navigation runs from the current month to the
+  last month with a Departure; it opens on the current month if a Departure starts in
+  it, otherwise the first later month that has one, with its first Departure day
+  selected.
 - **Status strip:** "Aggiornato alle 15:00 · 59 partenze · 4 nuove" ("Aggiornato il 26/10 alle 15:00" when the last OK snapshot is not from today). Red if the
   last crawl failed, the last Digest failed, or the catalogue is older than 72 h
   ("catalogo non aggiornato").

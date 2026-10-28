@@ -1,11 +1,13 @@
 {% extends "base.html" %}
 {% block title %}AMCrawler{% if hidden_view %} · Nascoste{% endif %}{% endblock %}
 {% block body %}
+{% set empty_text = "Nessuna partenza nascosta." if hidden_view else "Nessuna partenza corrisponde alla ricerca." %}
 <header class="topbar">
   <h1>AMCrawler</h1>
   <div class="seg" role="group" aria-label="Vista">
     <button type="button" class="seg-btn" data-view="list" aria-pressed="true">Lista</button>
     <button type="button" class="seg-btn" data-view="map" aria-pressed="false">Mappa</button>
+    <button type="button" class="seg-btn" data-view="cal" aria-pressed="false">Calendario</button>
   </div>
   <button type="button" class="icon-btn" id="open-filters" aria-haspopup="dialog" aria-controls="filters">Filtri</button>
   <a class="icon-btn" href="/settings" aria-label="Impostazioni">&#9881;</a>
@@ -33,12 +35,25 @@
 </ul>
 {% endif %}
 
-<main class="layout" data-view="list">
+<main class="layout" data-view="list" data-today="{{ today.isoformat() }}">
+  <section class="cal-pane" aria-label="Calendario" id="calendario">
+    <div id="cal">
+      <div class="cal-head">
+        <button type="button" class="icon-btn" id="cal-prev" aria-label="Mese precedente">&lsaquo;</button>
+        <h2 id="cal-title" aria-live="polite"></h2>
+        <button type="button" class="icon-btn" id="cal-next" aria-label="Mese successivo">&rsaquo;</button>
+      </div>
+      <div id="cal-grid"></div>
+      <p id="cal-none" class="empty" hidden>Nessuna partenza in questo mese.</p>
+      <p id="cal-sel" class="cal-sel" aria-live="polite"></p>
+    </div>
+    <p id="cal-empty" class="empty" hidden>{{ empty_text }}</p>
+  </section>
   <section class="list" aria-label="Partenze" id="lista">
     {% for d in results %}
     {% include "_card.html" %}
     {% else %}
-    <p class="empty">{% if hidden_view %}Nessuna partenza nascosta.{% else %}Nessuna partenza corrisponde alla ricerca.{% endif %}</p>
+    <p class="empty">{{ empty_text }}</p>
     {% endfor %}
   </section>
   <section class="map-pane" aria-label="Mappa">
@@ -74,4 +89,5 @@
 <script src="/static/vendor/d3.v7.9.0.min.js" defer></script>
 <script src="/static/vendor/topojson-client.3.1.0.min.js" defer></script>
 <script src="/static/map.js" defer></script>
+<script src="/static/calendar.js" defer></script>
 {% endblock %}

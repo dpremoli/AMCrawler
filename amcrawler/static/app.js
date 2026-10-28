@@ -9,20 +9,46 @@
       .catch(function () { return false; });
   }
 
-  // View toggle (phone): list or map. map.js listens for "amc:view".
+  // View toggle: list, map or calendar, remembered per device. map.js and calendar.js
+  // listen for "amc:view". On desktop the list is always shown, so "list" means the map.
+  var VIEWS = ["list", "map", "cal"];
   var layout = document.querySelector(".layout");
   var segButtons = document.querySelectorAll(".seg-btn");
-  function setView(view) {
-    if (!layout) { return; }
-    layout.setAttribute("data-view", view);
+  var desktop = window.matchMedia ? window.matchMedia("(min-width: 900px)") : null;
+  var view = "list";
+
+  function storedView() {
+    try { return window.localStorage.getItem("amc-view"); } catch (e) { return null; }
+  }
+  function storeView(v) {
+    try { window.localStorage.setItem("amc-view", v); } catch (e) { /* private mode */ }
+  }
+  function paintSeg() {
+    var shown = desktop && desktop.matches && view === "list" ? "map" : view;
     segButtons.forEach(function (b) {
-      b.setAttribute("aria-pressed", String(b.getAttribute("data-view") === view));
+      b.setAttribute("aria-pressed", String(b.getAttribute("data-view") === shown));
     });
-    document.dispatchEvent(new CustomEvent("amc:view", { detail: view }));
+  }
+  function setView(v) {
+    if (!layout) { return; }
+    view = v;
+    layout.setAttribute("data-view", v);
+    paintSeg();
+    document.dispatchEvent(new CustomEvent("amc:view", { detail: v }));
   }
   segButtons.forEach(function (b) {
-    b.addEventListener("click", function () { setView(b.getAttribute("data-view")); });
+    b.addEventListener("click", function () {
+      var v = b.getAttribute("data-view");
+      storeView(v);
+      setView(v);
+    });
   });
+  if (desktop && desktop.addEventListener) { desktop.addEventListener("change", paintSeg); }
+  // A tap on a map country reloads with #lista (phone): show the list, not the saved view.
+  var fromMap = window.location.hash === "#lista";
+  var saved = fromMap ? "list" : storedView();
+  if (fromMap) { storeView("list"); }
+  setView(VIEWS.indexOf(saved) === -1 ? "list" : saved);
 
   // Filter bottom sheet.
   var sheet = document.getElementById("filters");

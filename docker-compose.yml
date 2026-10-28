@@ -1,0 +1,14 @@
+services:
+  amcrawler:
+    container_name: amcrawler
+    build: .
+    env_file: .env
+    volumes:
+      - "/mnt/user/appdata/amcrawler/data:/data"
+    networks:
+      - proxy
+    restart: unless-stopped
+
+networks:
+  proxy:
+    external: true

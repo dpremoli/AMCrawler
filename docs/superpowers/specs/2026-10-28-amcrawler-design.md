@@ -206,10 +206,13 @@ Digest ran now. Same set drives the map's accent colour.
 - Digest: daily at `send_time` (default `07:00`, editable in GUI; changing it
   reschedules both jobs live).
 - Catch-up: jobs live in memory, so at scheduler start and whenever `send_time` is
-  changed, if local now is past today's `send_time` by less than 6 h and no
-  baseline/sent/empty Digest run exists for today, a one-off `digest-catchup` job
-  (date trigger, now + 2 min, after any startup crawl) runs the Digest. The
-  once-per-day guard makes a double run harmless.
+  changed, if local now is past today's `send_time` by less than 6 h (real
+  elapsed time, so DST days are not an hour off) and **no Digest run of any status**
+  exists for today, a one-off `digest-catchup` job (date trigger, now + 2 min, after any
+  startup crawl) runs the Digest. A `failed`/`stale` run today therefore also stops the
+  catch-up (else every settings save or restart in the window would resend the same
+  mail); the scheduled job still skips only a baseline/sent/empty run, so a failed or
+  stale run can be retried at the next scheduled time.
 - Catalogue refresh: inside the crawl, if `itineraries.fetched_at` is older than 24 h,
   **or** (forced) if a fetched Departure belongs to an Itinerary the catalogue does not
   know yet, at most once per hour (last attempt kept in `settings`). This makes the
@@ -316,7 +319,8 @@ Tap targets ≥ 44 px. System font stack. Light and dark via
 - **Top bar:** title, `Lista | Mappa` segmented toggle (phone only), filter button
   opening a bottom sheet with the Search form, settings icon.
 - **Status strip:** "Aggiornato alle 15:00 · 59 partenze · 4 nuove" ("Aggiornato il 26/10 alle 15:00" when the last OK snapshot is not from today). Red if the
-  last crawl failed or the last Digest failed.
+  last crawl failed, the last Digest failed, or the catalogue is older than 72 h
+  ("catalogo non aggiornato").
 - **Active filter chips** under the bar, each removable.
 - **List:** cards sorted by start date. Card = name, `NUOVA` badge if New,
   dates, duration, `8/15 iscritti`, Formula, Countries, notes (2 lines, tap to

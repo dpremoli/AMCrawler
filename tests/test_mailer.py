@@ -3,6 +3,7 @@ from datetime import date
 import pytest
 
 from amcrawler.mailer import (
+    MailerNotConfigured,
     SmtpMailer,
     date_range,
     describe_filter,
@@ -107,9 +108,8 @@ def test_smtp_mailer_sends_multipart(monkeypatch):
             calls["msg"] = msg
 
     monkeypatch.setattr("amcrawler.mailer.smtplib.SMTP", FakeSMTP)
-    SmtpMailer("smtp.example.com", 587, "u@example.com", "pw", "maintainer@example.com").send(
-        "owner@example.com", "Oggetto", "testo", "<p>html</p>"
-    )
+    SmtpMailer("smtp.example.com", 587, "u@example.com", "pw", "maintainer@example.com",
+               "owner@example.com").send("Oggetto", "testo", "<p>html</p>")
     msg = calls["msg"]
     assert calls["addr"] == ("smtp.example.com", 587) and calls["tls"]
     assert calls["login"] == ("u@example.com", "pw")
@@ -139,9 +139,14 @@ def test_smtp_not_configured_raises_before_connecting(monkeypatch):
         raise AssertionError("smtplib.SMTP must not be constructed")
 
     monkeypatch.setattr("amcrawler.mailer.smtplib.SMTP", boom)
-    for user, pw, sender in [("", "pw", "m@example.com"), ("u", "", "m@example.com"),
-                             ("u", "pw", "")]:
-        with pytest.raises(RuntimeError) as exc:
-            SmtpMailer("smtp.example.com", 587, user, pw, sender).send("o@example.com", "s", "t")
-        assert str(exc.value) == (
-            "SMTP non configurato: impostare SMTP_USER, SMTP_PASSWORD e DIGEST_FROM")
+    creds = "SMTP non configurato: impostare SMTP_USER, SMTP_PASSWORD e DIGEST_FROM"
+    for user, pw, sender, to, message in [
+            ("", "pw", "m@example.com", "o@example.com", creds),
+            ("u", "", "m@example.com", "o@example.com", creds),
+            ("u", "pw", "", "o@example.com", creds),
+            ("u", "pw", "m@example.com", "", "DIGEST_TO non impostato"),
+            ("", "", "", "", "DIGEST_TO non impostato; " + creds)]:
+        with pytest.raises(MailerNotConfigured) as exc:
+            SmtpMailer("smtp.example.com", 587, user, pw, sender, to).send("s", "t")
+        assert str(exc.value) == message
+        assert exc.value.recipient_missing is (to == "")

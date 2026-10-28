@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from amcrawler.mailer import MailerNotConfigured
 from amcrawler.models import Departure, Itinerary
 
 TODAY = date(2026, 10, 28)
@@ -67,16 +68,22 @@ def store(tmp_path):
 
 
 class FakeMailer:
-    """Records sent mail as (to, subject, text, html); fail=True makes send raise."""
+    """Records sent mail as (to, subject, text, html); fail=True makes send raise.
 
-    def __init__(self, fail: bool = False):
+    Like SmtpMailer it is bound to one recipient; to="" means not configured.
+    """
+
+    def __init__(self, fail: bool = False, to: str = "owner@example.com"):
         self.fail = fail
+        self.to = to
         self.sent: list[tuple] = []
 
-    def send(self, to, subject, text, html=None):
+    def send(self, subject, text, html=None):
+        if not self.to:
+            raise MailerNotConfigured("DIGEST_TO non impostato", recipient_missing=True)
         if self.fail:
             raise RuntimeError("smtp down")
-        self.sent.append((to, subject, text, html))
+        self.sent.append((self.to, subject, text, html))
 
 
 NOW = datetime(2026, 10, 28, 12, 0, tzinfo=timezone.utc)

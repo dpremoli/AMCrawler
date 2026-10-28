@@ -8,6 +8,7 @@ from email.message import EmailMessage
 
 from jinja2 import Environment, PackageLoader, select_autoescape
 
+from .config import Config
 from .geo import country_name_it
 from .labels import describe_filter, giorni
 from .models import Departure, Filter
@@ -80,21 +81,43 @@ def render_stale(hours: int, last_error: str | None) -> tuple[str, str]:
     return subject, text
 
 
+class MailerNotConfigured(RuntimeError):
+    """Raised by send() before any network use when recipient or credentials are missing."""
+
+    def __init__(self, message: str, recipient_missing: bool = False):
+        super().__init__(message)
+        self.recipient_missing = recipient_missing
+
+
 class SmtpMailer:
-    def __init__(self, host: str, port: int, user: str, password: str, sender: str):
+    """Sends mail to one fixed recipient (the Coordinator)."""
+
+    def __init__(self, host: str, port: int, user: str, password: str, sender: str,
+                 recipient: str):
         self.host = host
         self.port = port
         self.user = user
         self.password = password
         self.sender = sender
+        self.recipient = recipient
 
-    def send(self, to: str, subject: str, text: str, html: str | None = None) -> None:
+    @classmethod
+    def from_config(cls, cfg: Config) -> "SmtpMailer":
+        return cls(cfg.smtp_host, cfg.smtp_port, cfg.smtp_user, cfg.smtp_password,
+                   cfg.digest_from, cfg.digest_to)
+
+    def send(self, subject: str, text: str, html: str | None = None) -> None:
+        missing = []
+        if not self.recipient:
+            missing.append("DIGEST_TO non impostato")
         if not (self.user and self.password and self.sender):
-            raise RuntimeError(
+            missing.append(
                 "SMTP non configurato: impostare SMTP_USER, SMTP_PASSWORD e DIGEST_FROM")
+        if missing:
+            raise MailerNotConfigured("; ".join(missing), not self.recipient)
         msg = EmailMessage()
         msg["From"] = self.sender
-        msg["To"] = to
+        msg["To"] = self.recipient
         msg["Subject"] = subject
         msg.set_content(text)
         if html is not None:

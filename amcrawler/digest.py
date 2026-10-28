@@ -11,7 +11,6 @@ from .models import Departure
 from .store import Store
 
 STALE_AFTER = timedelta(hours=24)
-NO_RECIPIENT = "DIGEST_TO non impostato"
 
 
 def today_in(tz: str, now: datetime) -> date:
@@ -43,21 +42,29 @@ def badged_ids(store: Store, today: date,
         d.id for d in compute_new_entries(store, today, current)}
 
 
-def _send_stale(store: Store, mailer, cfg: Config, now: datetime, last_ok) -> str:
+def _deliver(mailer, render) -> str | None:
+    """Render and send one mail; return the error text on failure (recorded, not raised)."""
+    try:
+        subject, text, html = render()
+        mailer.send(subject, text, html)
+    except Exception as e:  # noqa: BLE001
+        return str(e)
+    return None
+
+
+def _send_stale(store: Store, mailer, now: datetime, last_ok) -> str:
     if last_ok is None:
         hours, last_error = 0, "nessuno snapshot riuscito"
     else:
         hours = int((now - last_ok.taken_at).total_seconds() // 3600)
         latest = store.latest_snapshot()
         last_error = latest.error if latest is not None else None
-    error = None
-    try:
-        if not cfg.digest_to:
-            raise RuntimeError(NO_RECIPIENT)
+
+    def render():
         subject, text = render_stale(hours, last_error)
-        mailer.send(cfg.digest_to, subject, text)
-    except Exception as e:  # noqa: BLE001 - recorded, not raised
-        error = str(e)
+        return subject, text, None
+
+    error = _deliver(mailer, render)
     store.record_digest_run(now, last_ok.id if last_ok else None, "stale", [], error)
     return "stale"
 
@@ -67,7 +74,7 @@ def _run(store: Store, mailer, cfg: Config, now: datetime, today: date) -> str:
         return "skipped"
     last_ok = store.latest_ok_snapshot()
     if last_ok is None or now - last_ok.taken_at > STALE_AFTER:
-        return _send_stale(store, mailer, cfg, now, last_ok)
+        return _send_stale(store, mailer, now, last_ok)
     if not store.has_digest_runs():
         store.record_digest_run(now, last_ok.id, "baseline", [])
         return "baseline"
@@ -76,14 +83,15 @@ def _run(store: Store, mailer, cfg: Config, now: datetime, today: date) -> str:
         store.record_digest_run(now, last_ok.id, "empty", [])
         return "empty"
     ids = [d.id for d in entries]
-    try:
-        if not cfg.digest_to:
-            raise RuntimeError(NO_RECIPIENT)
+
+    def render():
         subject, html, text = render_digest(
             entries, store.digest_filter(), cfg.public_url, today)
-        mailer.send(cfg.digest_to, subject, text, html)
-    except Exception as e:  # noqa: BLE001 - recorded, not raised
-        store.record_digest_run(now, last_ok.id, "failed", ids, str(e))
+        return subject, text, html
+
+    error = _deliver(mailer, render)
+    if error is not None:
+        store.record_digest_run(now, last_ok.id, "failed", ids, error)
         return "failed"
     store.record_digest_run(now, last_ok.id, "sent", ids)
     return "sent"

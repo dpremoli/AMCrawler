@@ -30,8 +30,7 @@ def main(argv: list[str]) -> int:
             return 1
         print(f"crawl ok: snapshot {snap.id}")
     else:
-        mailer = SmtpMailer(cfg.smtp_host, cfg.smtp_port, cfg.smtp_user,
-                            cfg.smtp_password, cfg.digest_from)
+        mailer = SmtpMailer.from_config(cfg)
         status = digest.run_digest(store, mailer, cfg, now)
         print(f"digest: {status}")
         # "stale" means the crawler has been failing, so it is an error too.

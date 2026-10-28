@@ -20,7 +20,7 @@ from .auth import AccessVerifier, install_auth
 from .config import Config, load_config
 from .geo import country_name_it, iso_numeric
 from .labels import filter_parts, giorni, plural_it
-from .mailer import SmtpMailer, date_range, render_digest, truncate_notes
+from .mailer import MailerNotConfigured, SmtpMailer, date_range, render_digest, truncate_notes
 from .models import Filter
 from .source import itinerary_url
 from .store import SnapshotInfo, Store
@@ -73,8 +73,7 @@ def create_app(
         store = Store(cfg.db_path)
         store.init()
     if mailer is None:
-        mailer = SmtpMailer(cfg.smtp_host, cfg.smtp_port, cfg.smtp_user,
-                            cfg.smtp_password, cfg.digest_from)
+        mailer = SmtpMailer.from_config(cfg)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -249,27 +248,33 @@ def create_app(
         store.set_digest_filter(Filter.from_query(pairs))
         return RedirectResponse("/settings", status_code=303)
 
-    def pending_digest() -> tuple[str, str, str, int]:
-        entries = digest.compute_new_entries(store, digest.today_in(cfg.tz, now()))
-        subject, html, text = render_digest(
-            entries, store.digest_filter(), cfg.public_url,
-            digest.today_in(cfg.tz, now()))
+    def render_pending() -> tuple[str, str, str, int]:
+        today = digest.today_in(cfg.tz, now())
+        entries = digest.compute_new_entries(store, today)
+        subject, html, text = render_digest(entries, store.digest_filter(),
+                                            cfg.public_url, today)
         return subject, html, text, len(entries)
 
     @app.get("/digest/preview")
     def digest_preview(request: Request):
-        subject, html, _text, count = pending_digest()
+        try:
+            _subject, html, _text, count = render_pending()
+        except Exception:
+            log.exception("digest preview failed")
+            return templates.TemplateResponse(request, "preview_error.html", {})
         if count == 0:
             return templates.TemplateResponse(request, "preview_empty.html", {})
         return HTMLResponse(html)
 
     @app.post("/digest/test")
     def digest_test():
-        if not cfg.digest_to:
-            return RedirectResponse("/settings?prova=destinatario", status_code=303)
         try:
-            subject, html, text, _count = pending_digest()
-            mailer.send(cfg.digest_to, "[PROVA] " + subject, "[PROVA]\n\n" + text, html)
+            subject, html, text, _count = render_pending()
+            mailer.send("[PROVA] " + subject, "[PROVA]\n\n" + text, html)
+        except MailerNotConfigured as exc:
+            return RedirectResponse(
+                "/settings?prova=" + ("destinatario" if exc.recipient_missing else "smtp"),
+                status_code=303)
         except Exception:
             log.exception("test digest failed")
             return RedirectResponse("/settings?prova=errore", status_code=303)

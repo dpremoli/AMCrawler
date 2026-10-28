@@ -169,7 +169,7 @@ def test_settings_tools_come_before_filter_form(client):
 def test_digest_test_without_recipient_explains(cfg_dev, seeded_store):
     import dataclasses
 
-    mailer = FakeMailer()
+    mailer = FakeMailer(to="")
     cfg = dataclasses.replace(cfg_dev, digest_to="")
     c = TestClient(create_app(cfg, store=seeded_store, mailer=mailer,
                               start_scheduler=False, now=lambda: NOW),
@@ -186,3 +186,25 @@ def test_settings_keeps_saved_values_missing_from_catalogue(client, seeded_store
     assert re.search(r'name="country" value="NO" checked', html)
     assert re.search(r'name="area" value="Nord Europa" checked', html)
     assert re.search(r'name="formula" value="Nuova" checked', html)
+
+
+def test_digest_preview_render_error_shows_italian_message(client, monkeypatch):
+    def boom(*a, **k):
+        raise ValueError("render broke")
+
+    monkeypatch.setattr("amcrawler.web.render_digest", boom)
+    r = client.get("/digest/preview")
+    assert r.status_code == 200
+    assert "Impossibile generare l'anteprima" in r.text
+
+
+def test_digest_test_smtp_not_configured_is_reported(client, mailer, monkeypatch):
+    from amcrawler.mailer import MailerNotConfigured
+
+    def not_configured(*a, **k):
+        raise MailerNotConfigured("SMTP non configurato")
+
+    monkeypatch.setattr(mailer, "send", not_configured)
+    r = client.post("/digest/test")
+    assert r.status_code == 303
+    assert r.headers["location"] == "/settings?prova=smtp"

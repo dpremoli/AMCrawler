@@ -103,10 +103,14 @@ def fetch_uncovered(client: httpx.Client, pause: float = 1.0) -> list[Departure]
         except ValueError as exc:
             raise SourceError(f"tours page {page}: invalid JSON") from exc
         deps, size = parse_tours_page(payload)
+        if size < 1:
+            raise SourceError(f"tours page {page}: maxResultsPerPage {size}")
         found.extend(deps)
         # last page is decided on the RAW result count, not the post-drop count
         if len(payload["data"]["results"]) < size:
             break
+    else:
+        raise SourceError("troppe pagine")
     return found
 
 

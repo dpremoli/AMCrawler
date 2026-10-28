@@ -161,3 +161,24 @@ def test_render_stale_error_records_stale(store, monkeypatch):
     assert mailer.sent == []
     run = store.recent_digest_runs()[0]
     assert run.status == "stale" and run.error == "stale template broke"
+
+
+def test_empty_digest_to_records_failed_without_mailing(store):
+    _baseline(store)
+    store.record_snapshot(NOW - timedelta(hours=1), [dep(id="d1"), dep(id="d2")])
+    cfg = load_config({"AMC_PUBLIC_URL": "https://viaggi.example.com"})
+    mailer = FakeMailer()
+    assert run_digest(store, mailer, cfg, NOW) == "failed"
+    run = store.recent_digest_runs()[0]
+    assert run.status == "failed" and run.error == "DIGEST_TO non impostato"
+    assert mailer.sent == []
+
+
+def test_empty_digest_to_on_stale_path_records_error_without_mailing(store):
+    store.record_snapshot(NOW - timedelta(hours=30), [dep(id="d1")])
+    cfg = load_config({"AMC_PUBLIC_URL": "https://viaggi.example.com"})
+    mailer = FakeMailer()
+    assert run_digest(store, mailer, cfg, NOW) == "stale"
+    run = store.recent_digest_runs()[0]
+    assert run.status == "stale" and run.error == "DIGEST_TO non impostato"
+    assert mailer.sent == []

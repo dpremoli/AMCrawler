@@ -22,6 +22,10 @@ _env = Environment(
 )
 
 
+def giorni(n: int) -> str:
+    return f"{n} giorno" if n == 1 else f"{n} giorni"
+
+
 def short_date(d: date) -> str:
     return f"{d.day} {MONTHS_IT[d.month - 1]}"
 
@@ -54,17 +58,17 @@ def describe_filter(f: Filter) -> str:
         label = "Formula" if len(f.formulas) == 1 else "Formule"
         parts.append(f"{label}: " + ", ".join(f.formulas))
     if f.days_from is not None and f.days_to is not None:
-        parts.append(f"Partenza tra {f.days_from} e {f.days_to} giorni")
+        parts.append(f"Partenza tra {f.days_from} e {giorni(f.days_to)}")
     elif f.days_from is not None:
-        parts.append(f"Partenza tra almeno {f.days_from} giorni")
+        parts.append(f"Partenza tra almeno {giorni(f.days_from)}")
     elif f.days_to is not None:
-        parts.append(f"Partenza entro {f.days_to} giorni")
+        parts.append(f"Partenza entro {giorni(f.days_to)}")
     if f.duration_min is not None and f.duration_max is not None:
-        parts.append(f"Durata {f.duration_min}–{f.duration_max} giorni")
+        parts.append(f"Durata {f.duration_min}–{giorni(f.duration_max)}")
     elif f.duration_min is not None:
-        parts.append(f"Durata minima {f.duration_min} giorni")
+        parts.append(f"Durata minima {giorni(f.duration_min)}")
     elif f.duration_max is not None:
-        parts.append(f"Durata massima {f.duration_max} giorni")
+        parts.append(f"Durata massima {giorni(f.duration_max)}")
     if f.min_participants > 1:
         parts.append(f"Almeno {f.min_participants} iscritti")
     return " · ".join(parts) if parts else "Tutte le partenze senza coordinatore"
@@ -75,7 +79,7 @@ def _card(d: Departure) -> dict:
         "name": d.name,
         "code": d.code,
         "dates": date_range(d.start_date, d.end_date),
-        "duration": f"{d.duration} giorni",
+        "duration": giorni(d.duration),
         "participants": f"{d.participants}/{d.max_participants} iscritti",
         "formula": d.formula,
         "countries": ", ".join(country_name_it(c) for c in d.countries),
@@ -114,6 +118,9 @@ class SmtpMailer:
         self.sender = sender
 
     def send(self, to: str, subject: str, text: str, html: str | None = None) -> None:
+        if not (self.user and self.password and self.sender):
+            raise RuntimeError(
+                "SMTP non configurato: impostare SMTP_USER, SMTP_PASSWORD e DIGEST_FROM")
         msg = EmailMessage()
         msg["From"] = self.sender
         msg["To"] = to

@@ -11,6 +11,7 @@ from .models import Departure
 from .store import Store
 
 STALE_AFTER = timedelta(hours=24)
+NO_RECIPIENT = "DIGEST_TO non impostato"
 
 
 def today_in(tz: str, now: datetime) -> date:
@@ -45,6 +46,8 @@ def _send_stale(store: Store, mailer, cfg: Config, now: datetime, last_ok) -> st
         last_error = latest.error if latest is not None else None
     error = None
     try:
+        if not cfg.digest_to:
+            raise RuntimeError(NO_RECIPIENT)
         subject, text = render_stale(hours, last_error)
         mailer.send(cfg.digest_to, subject, text)
     except Exception as e:  # noqa: BLE001 - recorded, not raised
@@ -68,6 +71,8 @@ def _run(store: Store, mailer, cfg: Config, now: datetime, today: date) -> str:
         return "empty"
     ids = [d.id for d in entries]
     try:
+        if not cfg.digest_to:
+            raise RuntimeError(NO_RECIPIENT)
         subject, html, text = render_digest(
             entries, store.digest_filter(), cfg.public_url, today)
         mailer.send(cfg.digest_to, subject, text, html)

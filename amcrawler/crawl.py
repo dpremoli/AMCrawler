@@ -20,7 +20,10 @@ def run_crawl(store: Store, client: httpx.Client, now: datetime,
     fetched = store.catalogue_fetched_at()
     if fetched is None or now - fetched > CATALOGUE_MAX_AGE:
         try:
-            store.save_catalogue(fetch_catalogue(client), now)
+            catalogue = fetch_catalogue(client)
+            if not catalogue:
+                raise SourceError("empty catalogue")
+            store.save_catalogue(catalogue, now)
         except SourceError as exc:
             log.warning("catalogue refresh failed: %s", exc)
 

@@ -81,3 +81,21 @@ def test_parse_catalogue_garbage():
 
 def test_itinerary_url():
     assert itinerary_url("1410") == "https://www.viaggiavventurenelmondo.it/viaggi/1410"
+
+
+@respx.mock
+def test_fetch_uncovered_too_many_pages_raises():
+    full = load_json("tours_page1.json")  # a full page: never a short one
+    respx.get(f"{BASE_URL}/api/operative/tours").mock(
+        return_value=httpx.Response(200, json=full))
+    with pytest.raises(SourceError, match="troppe pagine"):
+        fetch_uncovered(make_client(), pause=0)
+
+
+@respx.mock
+def test_fetch_uncovered_rejects_zero_page_size():
+    payload = {"success": True, "data": {"results": [], "maxResultsPerPage": 0}}
+    respx.get(f"{BASE_URL}/api/operative/tours").mock(
+        return_value=httpx.Response(200, json=payload))
+    with pytest.raises(SourceError):
+        fetch_uncovered(make_client(), pause=0)

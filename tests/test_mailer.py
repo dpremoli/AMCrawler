@@ -1,9 +1,12 @@
 from datetime import date
 
+import pytest
+
 from amcrawler.mailer import (
     SmtpMailer,
     date_range,
     describe_filter,
+    giorni,
     render_digest,
     render_stale,
     subject_for,
@@ -114,3 +117,31 @@ def test_smtp_mailer_sends_multipart(monkeypatch):
     assert msg["Subject"] == "Oggetto"
     assert msg.get_body(("plain",)).get_content().strip() == "testo"
     assert msg.get_body(("html",)).get_content().strip() == "<p>html</p>"
+
+
+def test_giorni_singular_plural():
+    assert giorni(1) == "1 giorno"
+    assert giorni(12) == "12 giorni"
+
+
+def test_singular_day_in_filter_and_card():
+    f = Filter(days_from=1, days_to=1, duration_min=1, duration_max=1)
+    text = describe_filter(f)
+    assert "Partenza tra 1 e 1 giorno" in text and "Durata 1–1 giorno" in text
+    assert describe_filter(Filter(days_to=1)) == "Partenza entro 1 giorno"
+    _, html, plain = render_digest([dep(duration=1)], Filter(), "https://viaggi.example.com",
+                                   date(2026, 10, 28))
+    assert "1 giorno" in plain and "1 giorni" not in plain
+
+
+def test_smtp_not_configured_raises_before_connecting(monkeypatch):
+    def boom(*a, **k):
+        raise AssertionError("smtplib.SMTP must not be constructed")
+
+    monkeypatch.setattr("amcrawler.mailer.smtplib.SMTP", boom)
+    for user, pw, sender in [("", "pw", "m@example.com"), ("u", "", "m@example.com"),
+                             ("u", "pw", "")]:
+        with pytest.raises(RuntimeError) as exc:
+            SmtpMailer("smtp.example.com", 587, user, pw, sender).send("o@example.com", "s", "t")
+        assert str(exc.value) == (
+            "SMTP non configurato: impostare SMTP_USER, SMTP_PASSWORD e DIGEST_FROM")

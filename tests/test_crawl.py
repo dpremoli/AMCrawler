@@ -101,3 +101,15 @@ def test_crawl_dedupes_departures(store):
     assert info.ok
     assert info.departure_count == len(unique)
     assert len(store.snapshot_departures(info.id)) == len(unique)
+
+
+@respx.mock
+def test_crawl_empty_catalogue_keeps_old_one(store):
+    store.save_catalogue([itin(id="old", code="9999")], NOW - timedelta(days=2))
+    old_fetched = store.catalogue_fetched_at()
+    mock_ok()
+    respx.get(BASES).mock(return_value=httpx.Response(200, text="var x = {bases: []};"))
+    info = run_crawl(store, make_client(), NOW, pause=0)
+    assert info.ok
+    assert store.catalogue_fetched_at() == old_fetched
+    assert list(store.itineraries()) == ["old"]

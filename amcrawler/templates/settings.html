@@ -13,7 +13,7 @@
   {% elif test_result == "smtp" %}<p class="notice notice-bad" role="alert">SMTP non configurato.</p>
   {% elif test_result == "errore" %}<p class="notice notice-bad" role="alert">Invio non riuscito.</p>{% endif %}
 
-  <section class="digest-tools">
+  <section>
     <h2>Invio</h2>
     <label class="field">Orario di invio
       <input type="time" name="send_time" form="settings-form" value="{{ send_time }}" required>

@@ -2,14 +2,14 @@
   "use strict";
 
   function post(url) {
-    return fetch(url, { method: "POST", credentials: "same-origin" })
+    return fetch(url, { method: "POST" })
       .then(function (r) {
         return r.json().then(function (b) { return r.ok && b.ok === true; });
       })
       .catch(function () { return false; });
   }
 
-  // View toggle (phone): list or map. Task 10 listens for "amc:view".
+  // View toggle (phone): list or map. map.js listens for "amc:view".
   var layout = document.querySelector(".layout");
   var segButtons = document.querySelectorAll(".seg-btn");
   function setView(view) {
@@ -22,15 +22,14 @@
   segButtons.forEach(function (b) {
     b.addEventListener("click", function () { setView(b.getAttribute("data-view")); });
   });
-  window.amcSetView = setView;
 
   // Filter bottom sheet.
   var sheet = document.getElementById("filters");
   document.getElementById("open-filters").addEventListener("click", function () {
-    if (sheet.showModal) { sheet.showModal(); } else { sheet.setAttribute("open", ""); }
+    sheet.showModal();
   });
   document.getElementById("close-filters").addEventListener("click", function () {
-    if (sheet.close) { sheet.close(); } else { sheet.removeAttribute("open"); }
+    sheet.close();
   });
 
   // Notes: tap to expand.

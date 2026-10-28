@@ -15,7 +15,9 @@
 
   function plural(n) { return n + (n === 1 ? " partenza" : " partenze"); }
 
-  // Per numeric country id: { count, isNew, codes }.
+  function nameOf(code) { return data.names[code] || code; }
+
+  // Per numeric country id (or "?CODE" when unknown): { count, isNew, code }.
   function tally() {
     var byId = {};
     data.departures.forEach(function (dep) {
@@ -27,7 +29,7 @@
         if (dep.new) { t.isNew = true; }
       });
     });
-    return { byId: byId };
+    return byId;
   }
 
   function isDark() {
@@ -71,8 +73,7 @@
     drawnScheme = isDark();
 
     var features = window.topojson.feature(world, world.objects.countries).features;
-    var tallied = tally();
-    var byId = tallied.byId;
+    var byId = tally();
 
     var maxCount = 1;
     Object.keys(byId).forEach(function (k) { maxCount = Math.max(maxCount, byId[k].count); });
@@ -122,8 +123,7 @@
         if (t) {
           shown[String(f.id)] = true;
           node.style("fill", t.isNew ? "var(--accent)" : scale(t.count));
-          var name = data.names[t.code] || t.code;
-          var label = name + " · " + plural(t.count);
+          var label = nameOf(t.code) + " · " + plural(t.count);
           node.append("title").text(label);
           node.attr("tabindex", "0").attr("role", "link").attr("aria-label", label)
             .on("click", function () { window.location.href = targetUrl(t.code); })
@@ -139,16 +139,16 @@
     var missing = Object.keys(byId).filter(function (k) { return !shown[k]; })
       .map(function (k) { return byId[k]; })
       .sort(function (a, b) {
-        return (data.names[a.code] || a.code).localeCompare(data.names[b.code] || a.code, "it");
+        return nameOf(a.code).localeCompare(nameOf(b.code), "it");
       })
-      .map(function (t) { return (data.names[t.code] || t.code) + " (" + t.count + ")"; });
+      .map(function (t) { return nameOf(t.code) + " (" + t.count + ")"; });
     missingEl.textContent = missing.length ? "Non sulla mappa: " + missing.join(", ") : "";
   }
 
   function load() {
     if (world) { return Promise.resolve(); }
     if (!loading) {
-      loading = fetch("/static/vendor/countries-50m.json", { credentials: "same-origin" })
+      loading = fetch("/static/vendor/countries-50m.json")
         .then(function (r) {
           if (!r.ok) { throw new Error("map shapes " + r.status); }
           return r.json();

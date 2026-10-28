@@ -97,7 +97,6 @@ h1, h2 { margin: 0; }
   border: 0; border-radius: 16px 16px 0 0; background: var(--surface); color: var(--text);
 }
 .sheet::backdrop { background: rgba(0, 0, 0, .5); }
-.sheet fieldset { border: 1px solid var(--line); border-radius: 10px; margin: 12px 0; }
 .check { display: flex; align-items: center; gap: 8px; min-height: 44px; }
 .field { display: block; margin: 12px 0; font-size: .92rem; color: var(--muted); }
 .field input, .field select {
@@ -127,7 +126,6 @@ h1, h2 { margin: 0; }
 [hidden] { display: none !important; }
 .page { max-width: 640px; margin: 0 auto; padding: 12px 12px 48px; }
 .page h2 { font-size: 1.05rem; margin: 20px 0 6px; }
-.page fieldset { border: 1px solid var(--line); border-radius: 10px; margin: 12px 0; }
 .hint { color: var(--muted); font-size: .92rem; margin: 0; }
 .notice { padding: 10px 12px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); }
 .notice-bad { background: var(--bad-bg); color: var(--bad); border-color: var(--bad); }
@@ -144,4 +142,3 @@ h1, h2 { margin: 0; }
 .group { border: 1px solid var(--line); border-radius: 10px; margin: 8px 0; padding: 0 12px; }
 .group summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-weight: 600; }
 .group[open] summary { border-bottom: 1px solid var(--line); margin-bottom: 4px; }
-.group .check { min-height: 44px; }

@@ -162,3 +162,24 @@ def test_smtp_not_configured_raises_before_connecting(monkeypatch):
             SmtpMailer("smtp.example.com", 587, user, pw, sender, to).send("s", "t")
         assert str(exc.value) == message
         assert exc.value.recipient_missing is (to == "")
+
+
+def test_render_quiet_links_to_the_app():
+    from amcrawler.mailer import render_quiet
+
+    subject, html, text = render_quiet(Filter(), "https://viaggi.example.com")
+    assert subject == "AMCrawler: nessuna novità"
+    for body in (html, text):
+        assert "nessuna nuova partenza" in body.lower()
+        assert "https://viaggi.example.com" in body
+
+
+def test_render_current_subject_and_lines():
+    from amcrawler.mailer import render_current
+
+    subject, html, text = render_current(
+        [dep(name="Giappone Discovery", countries=("JP",))], Filter(),
+        "https://viaggi.example.com")
+    assert subject == "AMCrawler: partenze attuali (1)"
+    assert "Giappone Discovery" in html and "Giappone Discovery" in text
+    assert "Vedi viaggio" in html

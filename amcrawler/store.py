@@ -337,3 +337,28 @@ class Store:
 
     def set_send_time(self, hhmm: str) -> None:
         self._set_setting("send_time", hhmm)
+
+    def digest_enabled(self) -> bool:
+        raw = self._get_setting("digest_enabled")
+        return True if raw is None else bool(raw)
+
+    def set_digest_enabled(self, enabled: bool) -> None:
+        self._set_setting("digest_enabled", bool(enabled))
+
+    def digest_weekdays(self) -> list[int]:
+        """Weekdays (Monday = 0) the Digest is sent on; every day until saved."""
+        raw = self._get_setting("digest_weekdays")
+        return list(range(7)) if raw is None else sorted(set(raw))
+
+    def set_digest_weekdays(self, weekdays: list[int]) -> None:
+        self._set_setting("digest_weekdays", sorted(set(weekdays)))
+
+    def digest_quiet_mail(self) -> bool:
+        return bool(self._get_setting("digest_quiet_mail"))
+
+    def set_digest_quiet_mail(self, enabled: bool) -> None:
+        self._set_setting("digest_quiet_mail", bool(enabled))
+
+    def is_send_day(self, day: date) -> bool:
+        """Whether a Digest goes out on this (local) day: enabled and weekday chosen."""
+        return self.digest_enabled() and day.weekday() in self.digest_weekdays()

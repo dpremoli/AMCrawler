@@ -68,5 +68,5 @@ A Departure the owner has ruled out; it is excluded from Search results and the 
 _Avoid_: dismissed, archived, deleted
 
 **Digest**:
-The daily email listing New Entries; not sent on days with none.
+The email listing New Entries, sent on the Owner's chosen weekdays while enabled. On a day with no New Entries it is skipped, unless the Owner asked for a "nessuna novità" mail. After a pause or skipped days, the next Digest reports every New Entry since the previous Digest.
 _Avoid_: newsletter, summary, report, riepilogo

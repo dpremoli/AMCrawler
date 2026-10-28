@@ -32,6 +32,9 @@ def main(argv: list[str]) -> int:
     else:
         mailer = SmtpMailer.from_config(cfg)
         status = digest.run_digest(store, mailer, cfg, now)
+        if status in digest.SKIP_REASONS:
+            print(f"digest skipped: {digest.SKIP_REASONS[status]}")
+            return 0
         print(f"digest: {status}")
         # "stale" means the crawler has been failing, so it is an error too.
         if status in digest.ERROR_STATUSES:

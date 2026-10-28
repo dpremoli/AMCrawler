@@ -205,3 +205,107 @@ def test_first_ever_run_with_no_departures_is_a_baseline(store):
     sid = store.record_snapshot(DIGEST_NOW - timedelta(hours=1), [])
     assert run_digest(store, FakeMailer(), CFG, DIGEST_NOW) == "baseline"
     assert store.baseline_snapshot_id() == sid
+
+
+# --- send days, pause and the "nessuna novità" mail -------------------------------
+
+def _with_new_entry(store):
+    _baseline(store)
+    store.record_snapshot(DIGEST_NOW - timedelta(hours=1),
+                          [dep(id="d1"), dep(id="d2", name="Nuova")])
+
+
+def test_paused_digest_does_nothing(store, caplog):
+    _with_new_entry(store)
+    store.set_digest_enabled(False)
+    mailer = FakeMailer()
+    runs, baseline = store.recent_digest_runs(50), store.baseline_snapshot_id()
+    with caplog.at_level("INFO", logger="amcrawler"):
+        assert run_digest(store, mailer, CFG, DIGEST_NOW) == "paused"
+    assert mailer.sent == []
+    assert store.recent_digest_runs(50) == runs
+    assert store.baseline_snapshot_id() == baseline
+    assert "digest skipped: paused" in caplog.text
+
+
+def test_not_a_send_day_does_nothing_even_when_stale(store, caplog):
+    _with_new_entry(store)
+    store.set_digest_weekdays([0])  # DIGEST_NOW is a Wednesday
+    mailer = FakeMailer()
+    runs = store.recent_digest_runs(50)
+    later = DIGEST_NOW + timedelta(days=3)  # the snapshot is stale by then
+    with caplog.at_level("INFO", logger="amcrawler"):
+        assert run_digest(store, mailer, CFG, later) == "not_send_day"
+    assert mailer.sent == [] and store.recent_digest_runs(50) == runs
+    assert "digest skipped: not a send day" in caplog.text
+
+
+def test_send_day_uses_the_local_date(store):
+    _with_new_entry(store)
+    store.set_digest_weekdays([3])  # Thursday
+    cfg = load_config({"AMC_PUBLIC_URL": "https://viaggi.example.com",
+                       "DIGEST_FROM": "maintainer@example.com",
+                       "DIGEST_TO": "owner@example.com", "TZ": "Pacific/Auckland"})
+    now = datetime(2026, 10, 28, 12, 0, tzinfo=timezone.utc)  # Thursday 01:00 in Auckland
+    assert run_digest(store, FakeMailer(), cfg, now) == "sent"
+
+
+def test_after_a_pause_the_next_digest_reports_everything_since_baseline(store):
+    _with_new_entry(store)
+    store.set_digest_weekdays([0])
+    assert run_digest(store, FakeMailer(), CFG, DIGEST_NOW) == "not_send_day"
+    next_day = DIGEST_NOW + timedelta(days=1)
+    store.record_snapshot(next_day - timedelta(hours=1),
+                          [dep(id="d1"), dep(id="d2", name="Nuova"), dep(id="d3", name="Altra")])
+    store.set_digest_weekdays([0, 1, 2, 3])
+    assert run_digest(store, FakeMailer(), CFG, next_day) == "sent"
+    assert store.last_sent_entry_ids() == {"d2", "d3"}
+
+
+def test_quiet_mail_sent_when_empty_and_asked(store):
+    _baseline(store)
+    store.record_snapshot(DIGEST_NOW - timedelta(hours=1), [dep(id="d1")])
+    store.set_digest_quiet_mail(True)
+    mailer = FakeMailer()
+    assert run_digest(store, mailer, CFG, DIGEST_NOW) == "empty"
+    assert [m[1] for m in mailer.sent] == ["AMCrawler: nessuna novità"]
+    assert "https://viaggi.example.com" in mailer.sent[0][2]
+    assert store.recent_digest_runs(1)[0].status == "empty"
+
+
+def test_quiet_mail_also_for_an_empty_snapshot(store):
+    _baseline(store)
+    store.record_snapshot(DIGEST_NOW - timedelta(hours=1), [])
+    store.set_digest_quiet_mail(True)
+    mailer = FakeMailer()
+    assert run_digest(store, mailer, CFG, DIGEST_NOW) == "empty"
+    assert len(mailer.sent) == 1
+
+
+def test_no_quiet_mail_unless_asked(store):
+    _baseline(store)
+    store.record_snapshot(DIGEST_NOW - timedelta(hours=1), [dep(id="d1")])
+    mailer = FakeMailer()
+    assert run_digest(store, mailer, CFG, DIGEST_NOW) == "empty"
+    assert mailer.sent == []
+
+
+def test_no_quiet_mail_for_a_baseline_run(store):
+    store.record_snapshot(DIGEST_NOW - timedelta(hours=1), [dep(id="d1")])
+    store.set_digest_quiet_mail(True)
+    mailer = FakeMailer()
+    assert run_digest(store, mailer, CFG, DIGEST_NOW) == "baseline"
+    assert mailer.sent == []
+
+
+def test_quiet_mail_failure_records_failed_and_allows_retry(store):
+    _baseline(store)
+    sid = store.record_snapshot(DIGEST_NOW - timedelta(hours=1), [dep(id="d1")])
+    store.set_digest_quiet_mail(True)
+    assert run_digest(store, FakeMailer(fail=True), CFG, DIGEST_NOW) == "failed"
+    run = store.recent_digest_runs(1)[0]
+    assert run.status == "failed" and "smtp down" in run.error
+    assert store.digest_run_on(today_in(CFG.tz, DIGEST_NOW), CFG.tz) is None
+    mailer = FakeMailer()
+    assert run_digest(store, mailer, CFG, DIGEST_NOW) == "empty"
+    assert len(mailer.sent) == 1 and store.baseline_snapshot_id() == sid

@@ -1,4 +1,8 @@
 {{ subject }}
+{% if intro %}
+
+{{ intro }}
+{% endif %}
 {% for c in cards %}
 
 {{ c.name }}

@@ -42,12 +42,11 @@ def _card(d: Departure) -> dict:
     }
 
 
-def render_digest(
-    entries: list[Departure], f: Filter, public_url: str, day: date
-) -> tuple[str, str, str]:
-    subject = subject_for(len(entries), day)
+def _render(subject: str, entries: list[Departure], f: Filter, public_url: str,
+            intro: str | None = None) -> tuple[str, str, str]:
     ctx = {
         "subject": subject,
+        "intro": intro,
         "cards": [_card(d) for d in entries],
         "public_url": public_url,
         "filter_text": describe_filter(f),
@@ -55,6 +54,25 @@ def render_digest(
     html = env.get_template("email/digest.html").render(**ctx)
     text = env.get_template("email/digest.txt").render(**ctx)
     return subject, html, text
+
+
+def render_digest(
+    entries: list[Departure], f: Filter, public_url: str, day: date
+) -> tuple[str, str, str]:
+    return _render(subject_for(len(entries), day), entries, f, public_url)
+
+
+def render_current(
+    entries: list[Departure], f: Filter, public_url: str
+) -> tuple[str, str, str]:
+    """The Departures matching the Digest Filter now, not only the New Entries."""
+    return _render(f"AMCrawler: partenze attuali ({len(entries)})", entries, f, public_url)
+
+
+def render_quiet(f: Filter, public_url: str) -> tuple[str, str, str]:
+    """The "nessuna novità" mail for a send day without New Entries."""
+    return _render("AMCrawler: nessuna novità", [], f, public_url,
+                   intro="Oggi nessuna nuova partenza corrisponde al filtro del Digest.")
 
 
 def render_stale(hours: int | None, last_error: str | None) -> tuple[str, str]:

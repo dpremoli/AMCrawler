@@ -252,3 +252,24 @@ def test_catchup_window_uses_real_elapsed_time_on_a_dst_day(cfg_dev, store, monk
         assert "digest-catchup" in _added(added_kwargs)
     finally:
         sched.shutdown(wait=False)
+
+
+def test_no_catchup_on_a_day_that_is_not_a_send_day(cfg_dev, store, monkeypatch,
+                                                    added_kwargs):
+    store.set_digest_weekdays([0])  # 28 Oct 2026 is a Wednesday
+    now = datetime(2026, 10, 28, 8, 0, tzinfo=timezone.utc)
+    _, sched = _start_at(cfg_dev, store, monkeypatch, now)
+    try:
+        assert "digest-catchup" not in _added(added_kwargs)
+    finally:
+        sched.shutdown(wait=False)
+
+
+def test_no_catchup_while_the_digest_is_paused(cfg_dev, store, monkeypatch, added_kwargs):
+    store.set_digest_enabled(False)
+    now = datetime(2026, 10, 28, 8, 0, tzinfo=timezone.utc)
+    _, sched = _start_at(cfg_dev, store, monkeypatch, now)
+    try:
+        assert "digest-catchup" not in _added(added_kwargs)
+    finally:
+        sched.shutdown(wait=False)

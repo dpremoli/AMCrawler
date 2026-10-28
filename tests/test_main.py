@@ -48,3 +48,11 @@ def test_digest_exit_codes(monkeypatch, capsys, status, code):
     monkeypatch.setattr(cli.digest, "run_digest", lambda *a: status)
     assert cli.main(["digest"]) == code
     assert status in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("status,reason", [("paused", "paused"),
+                                           ("not_send_day", "not a send day")])
+def test_digest_skip_prints_reason_and_exits_0(monkeypatch, capsys, status, reason):
+    monkeypatch.setattr(cli.digest, "run_digest", lambda *a: status)
+    assert cli.main(["digest"]) == 0
+    assert f"digest skipped: {reason}" in capsys.readouterr().out

@@ -197,3 +197,148 @@ def test_digest_test_smtp_not_configured_is_reported(client, mailer, monkeypatch
     r = client.post("/digest/test")
     assert r.status_code == 303
     assert r.headers["location"] == "/settings?prova=smtp"
+
+
+# --- notification settings, "Invia elenco attuale", log out ------------------------
+
+def test_settings_page_shows_notification_controls(client):
+    html = client.get("/settings").text
+    assert re.search(r'name="digest_enabled"[^>]*checked', html)
+    assert not re.search(r'name="digest_quiet_mail"[^>]*checked', html)
+    assert "Digest attivo" in html and "Invia anche senza novità" in html
+    for i in range(7):
+        assert re.search(rf'name="weekday" value="{i}"[^>]*checked', html)
+    for name in ("lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato",
+                 "domenica"):
+        assert f'aria-label="{name}"' in html
+    assert 'name="send_time" form="settings-form"' in html
+
+
+def test_settings_page_reflects_saved_notification_settings(client, seeded_store):
+    seeded_store.set_digest_enabled(False)
+    seeded_store.set_digest_weekdays([0, 4])
+    seeded_store.set_digest_quiet_mail(True)
+    html = client.get("/settings").text
+    assert not re.search(r'name="digest_enabled"[^>]*checked', html)
+    assert re.search(r'name="digest_quiet_mail"[^>]*checked', html)
+    assert re.search(r'name="weekday" value="0"[^>]*checked', html)
+    assert not re.search(r'name="weekday" value="1"[^>]*checked', html)
+    assert re.search(r'name="weekday" value="4"[^>]*checked', html)
+
+
+def test_settings_save_notification_settings(client, seeded_store):
+    r = client.post("/settings", data={
+        "send_time": "07:00", "digest_enabled": "1", "weekday": ["0", "2", "4"],
+        "digest_quiet_mail": "1"})
+    assert r.status_code == 303
+    assert seeded_store.digest_enabled() is True
+    assert seeded_store.digest_weekdays() == [0, 2, 4]
+    assert seeded_store.digest_quiet_mail() is True
+
+
+def test_settings_unchecked_boxes_turn_the_options_off(client, seeded_store):
+    client.post("/settings", data={"send_time": "07:00", "weekday": ["1"]})
+    assert seeded_store.digest_enabled() is False
+    assert seeded_store.digest_quiet_mail() is False
+    assert seeded_store.digest_weekdays() == [1]
+
+
+def test_settings_enabled_without_weekdays_is_rejected(client, seeded_store, hook_calls):
+    r = client.post("/settings", data={
+        "send_time": "06:30", "digest_enabled": "1", "formula": "Discovery"})
+    assert r.status_code == 400
+    assert "Scegli almeno un giorno di invio." in r.text
+    assert seeded_store.digest_weekdays() == [0, 1, 2, 3, 4, 5, 6]
+    assert seeded_store.send_time() == "07:00"
+    assert seeded_store.digest_filter() == Filter()
+    assert hook_calls == []
+
+
+def test_settings_paused_may_have_no_weekdays(client, seeded_store):
+    r = client.post("/settings", data={"send_time": "07:00"})
+    assert r.status_code == 303
+    assert seeded_store.digest_enabled() is False
+    assert seeded_store.digest_weekdays() == []
+
+
+def test_settings_error_rerender_keeps_the_posted_choices(client):
+    r = client.post("/settings", data={
+        "send_time": "07:00", "digest_enabled": "1", "digest_quiet_mail": "1"})
+    assert r.status_code == 400
+    assert re.search(r'name="digest_quiet_mail"[^>]*checked', r.text)
+    assert not re.search(r'name="weekday" value="0"[^>]*checked', r.text)
+
+
+def test_settings_has_account_section_with_logout(client):
+    html = client.get("/settings").text
+    assert 'href="/cdn-cgi/access/logout"' in html
+    assert "Esci" in html and "Esci dall'accesso Google su questo dispositivo." in html
+    assert html.index("Ultimi invii") < html.index("Account")
+
+
+def test_settings_has_current_list_button(client):
+    html = client.get("/settings").text
+    assert 'action="/digest/current"' in html and "Invia elenco attuale" in html
+
+
+def test_digest_current_sends_matching_departures_and_records_nothing(
+        client, seeded_store, mailer):
+    seeded_store.set_digest_filter(Filter(formulas=("Adventure",)))
+    runs, baseline = seeded_store.recent_digest_runs(50), seeded_store.baseline_snapshot_id()
+    r = client.post("/digest/current")
+    assert r.status_code == 303
+    assert r.headers["location"] == "/settings?elenco=ok&n=2"
+    to, subject, text, html = mailer.sent[0]
+    assert to == "owner@example.com"
+    assert subject == "AMCrawler: partenze attuali (2)"
+    assert html.index("Thailandia Classica") < html.index("Kenya Safari")
+    assert "Giappone Discovery" not in html and "Giappone Discovery" not in text
+    assert seeded_store.recent_digest_runs(50) == runs
+    assert seeded_store.baseline_snapshot_id() == baseline
+
+
+def test_digest_current_leaves_out_hidden_departures(client, seeded_store, mailer):
+    seeded_store.hide("d1", "2026-0001", NOW)
+    client.post("/digest/current")
+    assert "Thailandia Classica" not in mailer.sent[0][3]
+    assert mailer.sent[0][1] == "AMCrawler: partenze attuali (2)"
+
+
+def test_digest_current_with_no_match_sends_nothing(client, seeded_store, mailer):
+    seeded_store.set_digest_filter(Filter(countries=("IT",)))
+    r = client.post("/digest/current")
+    assert r.status_code == 303
+    assert r.headers["location"] == "/settings?elenco=vuoto"
+    assert mailer.sent == []
+
+
+def test_digest_current_notices(client):
+    ok = client.get("/settings?elenco=ok&n=12").text
+    assert "Elenco inviato (12 partenze)." in ok
+    assert "Elenco inviato (1 partenza)." in client.get("/settings?elenco=ok&n=1").text
+    assert "Nessuna partenza corrisponde al filtro del Digest." in \
+        client.get("/settings?elenco=vuoto").text
+    assert "DIGEST_TO non impostato." in client.get("/settings?elenco=destinatario").text
+    assert "SMTP non configurato." in client.get("/settings?elenco=smtp").text
+    assert "Invio non riuscito." in client.get("/settings?elenco=errore").text
+
+
+def test_digest_current_failure_modes(client, mailer, monkeypatch):
+    def not_configured(*a, **k):
+        raise MailerNotConfigured("SMTP non configurato")
+
+    monkeypatch.setattr(mailer, "send", not_configured)
+    assert client.post("/digest/current").headers["location"] == "/settings?elenco=smtp"
+
+    def no_recipient(*a, **k):
+        raise MailerNotConfigured("DIGEST_TO non impostato", recipient_missing=True)
+
+    monkeypatch.setattr(mailer, "send", no_recipient)
+    assert client.post("/digest/current").headers["location"] == \
+        "/settings?elenco=destinatario"
+
+    def boom(*a, **k):
+        raise RuntimeError("smtp down")
+
+    monkeypatch.setattr(mailer, "send", boom)
+    assert client.post("/digest/current").headers["location"] == "/settings?elenco=errore"

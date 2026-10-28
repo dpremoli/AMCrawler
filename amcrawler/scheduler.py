@@ -67,6 +67,8 @@ def schedule_catchup(sched: BackgroundScheduler, app: FastAPI, send_time: str) -
     # mail on every settings save or restart; the scheduled job may still retry later
     if store.any_digest_run_on(local.date(), cfg.tz):
         return
+    if not store.is_send_day(local.date()):
+        return
     sched.add_job(digest_job, "date", args=[app], id="digest-catchup",
                   run_date=now + CATCHUP_DELAY, replace_existing=True)
 

@@ -1,14 +1,17 @@
 """Daily Digest job: baseline, stale warning, once-per-day guard, New Entry mail."""
 from __future__ import annotations
 
+import logging
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from .config import Config
 from .diff import new_entries
-from .mailer import render_digest, render_stale
+from .mailer import render_digest, render_quiet, render_stale
 from .models import Departure
 from .store import Store
+
+logger = logging.getLogger("amcrawler")
 
 STALE_AFTER = timedelta(hours=24)
 # Digest run statuses that mean something is wrong (and the CLI exits non-zero)
@@ -20,6 +23,8 @@ STATUS_LABELS_IT = {
     "failed": "Invio non riuscito",
     "stale": "Dati non aggiornati",
 }
+# run_digest results for a day the Owner did not ask for a Digest, with the reason logged
+SKIP_REASONS = {"paused": "paused", "not_send_day": "not a send day"}
 
 
 def to_local(dt: datetime, tz: str) -> datetime:
@@ -79,6 +84,18 @@ def _send_stale(store: Store, mailer, now: datetime, last_ok) -> str:
     return "stale"
 
 
+def _finish_empty(store: Store, mailer, cfg: Config, now: datetime, last_ok,
+                  snapshot_id: int | None) -> str:
+    """End a send day without New Entries: the "nessuna novità" mail when the Owner asked."""
+    if store.digest_quiet_mail():
+        error = _deliver(mailer, lambda: render_quiet(store.digest_filter(), cfg.public_url))
+        if error is not None:
+            store.record_digest_run(now, last_ok.id, "failed", [], error)
+            return "failed"
+    store.record_digest_run(now, snapshot_id, "empty", [])
+    return "empty"
+
+
 def _run(store: Store, mailer, cfg: Config, now: datetime, today: date) -> str:
     if store.digest_run_on(today, cfg.tz) is not None:
         return "skipped"
@@ -91,12 +108,10 @@ def _run(store: Store, mailer, cfg: Config, now: datetime, today: date) -> str:
     if last_ok.departure_count == 0:
         # an empty snapshot is never the baseline: keep the current one, so a recovery
         # does not report every Departure as a New Entry
-        store.record_digest_run(now, store.baseline_snapshot_id(), "empty", [])
-        return "empty"
+        return _finish_empty(store, mailer, cfg, now, last_ok, store.baseline_snapshot_id())
     entries = compute_new_entries(store, today)
     if not entries:
-        store.record_digest_run(now, last_ok.id, "empty", [])
-        return "empty"
+        return _finish_empty(store, mailer, cfg, now, last_ok, last_ok.id)
     ids = [d.id for d in entries]
 
     def render():
@@ -112,8 +127,20 @@ def _run(store: Store, mailer, cfg: Config, now: datetime, today: date) -> str:
     return "sent"
 
 
+def skip_reason(store: Store, today: date) -> str | None:
+    """Why no Digest goes out on `today`, or None on a send day."""
+    if not store.digest_enabled():
+        return "paused"
+    return None if store.is_send_day(today) else "not_send_day"
+
+
 def run_digest(store: Store, mailer, cfg: Config, now: datetime) -> str:
     today = today_in(cfg.tz, now)
+    skipped = skip_reason(store, today)
+    if skipped is not None:
+        # does nothing at all: no run, no mail, no stale warning, baseline untouched
+        logger.info("digest skipped: %s", SKIP_REASONS[skipped])
+        return skipped
     try:
         return _run(store, mailer, cfg, now, today)
     finally:

@@ -13,8 +13,22 @@
   {% elif test_result == "smtp" %}<p class="notice notice-bad" role="alert">SMTP non configurato.</p>
   {% elif test_result == "errore" %}<p class="notice notice-bad" role="alert">Invio non riuscito.</p>{% endif %}
 
+  {% if list_result == "ok" %}<p class="notice" role="status">Elenco inviato ({{ plural_it(list_count, "partenza", "partenze") }}).</p>
+  {% elif list_result == "vuoto" %}<p class="notice" role="status">Nessuna partenza corrisponde al filtro del Digest.</p>
+  {% elif list_result == "destinatario" %}<p class="notice notice-bad" role="alert">DIGEST_TO non impostato.</p>
+  {% elif list_result == "smtp" %}<p class="notice notice-bad" role="alert">SMTP non configurato.</p>
+  {% elif list_result == "errore" %}<p class="notice notice-bad" role="alert">Invio non riuscito.</p>{% endif %}
+
   <section>
     <h2>Invio</h2>
+    <label class="check"><input type="checkbox" name="digest_enabled" form="settings-form" value="1"{% if digest_enabled %} checked{% endif %}> Digest attivo</label>
+    <fieldset class="days">
+      <legend>Giorni di invio</legend>
+      {% for name in weekdays_it %}
+      <label class="day"><input type="checkbox" name="weekday" value="{{ loop.index0 }}" form="settings-form" aria-label="{{ name }}"{% if loop.index0 in digest_weekdays %} checked{% endif %}><span aria-hidden="true">{{ "LMMGVSD"[loop.index0] }}</span></label>
+      {% endfor %}
+    </fieldset>
+    <label class="check"><input type="checkbox" name="digest_quiet_mail" form="settings-form" value="1"{% if digest_quiet_mail %} checked{% endif %}> Invia anche senza novità</label>
     <label class="field">Orario di invio
       <input type="time" name="send_time" form="settings-form" value="{{ send_time }}" required>
     </label>
@@ -23,6 +37,9 @@
       <a class="btn" href="/digest/preview" target="_blank" rel="noopener">Anteprima</a>
       <form method="post" action="/digest/test">
         <button type="submit" class="btn">Invia prova</button>
+      </form>
+      <form method="post" action="/digest/current">
+        <button type="submit" class="btn">Invia elenco attuale</button>
       </form>
     </div>
   </section>
@@ -47,6 +64,14 @@
     {% else %}
     <p class="empty">Nessun invio finora.</p>
     {% endif %}
+  </section>
+
+  <section>
+    <h2>Account</h2>
+    <p class="hint">Esci dall'accesso Google su questo dispositivo.</p>
+    <div class="sheet-actions">
+      <a class="btn" href="/cdn-cgi/access/logout">Esci</a>
+    </div>
   </section>
 </main>
 {% endblock %}

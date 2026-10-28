@@ -181,3 +181,26 @@ def test_latest_nonempty_ok_snapshot_skips_empty_ones(store):
     store.record_snapshot(STORE_NOW + H, [])
     assert store.latest_ok_snapshot().id != full
     assert store.latest_nonempty_ok_snapshot().id == full
+
+
+def test_send_day_settings_defaults_and_roundtrip(store):
+    assert store.digest_enabled() is True
+    assert store.digest_weekdays() == [0, 1, 2, 3, 4, 5, 6]
+    assert store.digest_quiet_mail() is False
+    store.set_digest_enabled(False)
+    store.set_digest_weekdays([4, 0, 0])
+    store.set_digest_quiet_mail(True)
+    assert store.digest_enabled() is False
+    assert store.digest_weekdays() == [0, 4]
+    assert store.digest_quiet_mail() is True
+
+
+def test_is_send_day_needs_enabled_and_weekday(store):
+    wednesday = date(2026, 10, 28)
+    assert store.is_send_day(wednesday)
+    store.set_digest_weekdays([0, 1])
+    assert not store.is_send_day(wednesday) and store.is_send_day(date(2026, 10, 26))
+    store.set_digest_weekdays([2])
+    assert store.is_send_day(wednesday)
+    store.set_digest_enabled(False)
+    assert not store.is_send_day(wednesday)

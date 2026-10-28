@@ -136,7 +136,8 @@ digest_runs(id INTEGER PK, run_at TEXT, snapshot_id INT,
             entry_count INT, error TEXT)
 digest_entries(digest_run_id INT, departure_id TEXT, PRIMARY KEY(...))
 hidden(departure_id TEXT PK, code TEXT, hidden_at TEXT)
-settings(key TEXT PK, value_json TEXT)  -- 'digest_filter', 'send_time'
+settings(key TEXT PK, value_json TEXT)  -- 'digest_filter', 'send_time',
+                                          -- 'digest_enabled', 'digest_weekdays', 'digest_quiet_mail'
 ```
 
 Areas/Countries/Formula for a Departure come from the joined Itinerary at read
@@ -214,11 +215,18 @@ Digest ran now. Same set drives the map's accent colour.
 - Crawl: every 3 h at :00 (00, 03, …, 21) **and** at `send_time − 15 min`.
   Also once at startup if the last ok snapshot is older than 3 h.
 - Digest: daily at `send_time` (default `07:00`, editable in GUI; changing it
-  reschedules both jobs live).
+  reschedules both jobs live). The job only acts on a **send day**: Digest enabled
+  (`digest_enabled`, default on) and today's weekday (local, Monday = 0) in
+  `digest_weekdays` (default all seven). On any other day it does nothing: no
+  `digest_run`, no mail, no stale warning, baseline untouched, one INFO line
+  (`digest skipped: paused` / `digest skipped: not a send day`). The CLI
+  `python -m amcrawler digest` follows the same rule, prints the reason and exits 0.
+  After a pause or skipped days the next Digest therefore reports every New Entry
+  since the last baseline.
 - Catch-up: jobs live in memory, so at scheduler start and whenever `send_time` is
   changed, if local now is past today's `send_time` by less than 6 h (real
-  elapsed time, so DST days are not an hour off) and **no Digest run of any status**
-  exists for today, a one-off `digest-catchup` job (date trigger, now + 2 min, after any
+  elapsed time, so DST days are not an hour off), today is a send day and **no Digest
+  run of any status** exists for today, a one-off `digest-catchup` job (date trigger, now + 2 min, after any
   startup crawl) runs the Digest. A `failed`/`stale` run today therefore also stops the
   catch-up (else every settings save or restart in the window would resend the same
   mail); the scheduled job still skips only a baseline/sent/empty run, so a failed or
@@ -269,7 +277,11 @@ Digest ran now. Same set drives the map's accent colour.
 - Subject (Italian): `3 nuove partenze senza coordinatore · 29 ott`;
   singular `1 nuova partenza senza coordinatore · 29 ott`. Month abbreviations
   `gen feb mar apr mag giu lug ago set ott nov dic`, day without leading zero.
-- Not sent on days with zero New Entries.
+- Not sent on days with zero New Entries, unless `digest_quiet_mail` is on: then a
+  short "nessuna novità" mail goes out (subject `AMCrawler: nessuna novità`; says no
+  new Departures match the Digest Filter today, with the "Apri AMCrawler" link and
+  the filter line). The run stays `empty` when it is sent and is `failed` when the
+  send fails, like a failed Digest. Never sent for a `baseline` run.
 - HTML: single column, max-width 600 px, inline CSS, readable in the Gmail app.
   Plain-text alternative part included.
 - One card per New Entry: name (bold), code, `dd mmm – dd mmm` dates,
@@ -325,6 +337,7 @@ Tap targets ≥ 44 px. System font stack. Light and dark via
 | `POST /settings/from-search` | Copy current Search into Digest Filter, redirect to `/settings` |
 | `GET /digest/preview` | Render what the Digest would send now (HTML, in browser) |
 | `POST /digest/test` | Send that preview to `DIGEST_TO` now, marked "[PROVA]"; does not touch digest_runs |
+| `POST /digest/current` | Mail every Departure matching the current Digest Filter (latest OK snapshot, Hidden excluded, by start date then name) to `DIGEST_TO`, subject `AMCrawler: partenze attuali (N)`; records nothing. No match: nothing is sent. Redirects to `/settings?elenco=ok&n=N` (or `vuoto`, `destinatario`, `smtp`, `errore`) |
 | `GET /health` | `200 {"ok": true, "last_ok_snapshot": "..."}`; no auth |
 | `GET /manifest.webmanifest`, `/static/*` | PWA + assets |
 
@@ -352,9 +365,11 @@ Tap targets ≥ 44 px. System font stack. Light and dark via
 
 ### Settings `/settings`
 
-Digest Filter form (same fields as Search), send time (`HH:MM`), read-only
-recipient address, last 10 digest_runs with status, "Anteprima" and
-"Invia prova" buttons.
+Digest Filter form (same fields as Search), "Digest attivo", send weekdays (L M M G V S D
+toggles; at least one when enabled), "Invia anche senza novità", send time (`HH:MM`),
+read-only recipient address, last 10 digest_runs with status, "Anteprima", "Invia prova"
+and "Invia elenco attuale" buttons, and an "Account" section with "Esci" (link to
+`/cdn-cgi/access/logout`, handled by Cloudflare Access at the edge). One "Salva" saves all fields.
 
 ### PWA
 

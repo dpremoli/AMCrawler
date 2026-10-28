@@ -18,7 +18,7 @@ from .auth import AccessVerifier, install_auth
 from .config import Config, load_config, parse_hhmm
 from .geo import country_name_it, iso_numeric
 from .labels import filter_parts, plural_it
-from .mailer import MailerNotConfigured, SmtpMailer, render_digest
+from .mailer import MailerNotConfigured, SmtpMailer, render_current, render_digest
 from .models import Filter
 from .store import SnapshotInfo, Store
 from .templating import env
@@ -26,6 +26,7 @@ from .templating import env
 _PKG = Path(__file__).parent
 log = logging.getLogger(__name__)
 CATALOGUE_STALE_AFTER = timedelta(hours=72)
+WEEKDAYS_IT = ("lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato", "domenica")
 
 def _href(pairs: list[tuple[str, str]], hidden_view: bool) -> str:
     if hidden_view:
@@ -39,6 +40,10 @@ def _chips(f: Filter, hidden_view: bool) -> list[dict]:
         {"label": label, "href": _href(pairs[:i] + pairs[i + 1:], hidden_view)}
         for i, (_key, _value, label) in enumerate(filter_parts(f))
     ]
+
+
+def _int_or_zero(raw: str | None) -> int:
+    return int(raw) if raw and raw.isascii() and raw.isdigit() else 0
 
 
 def _filter_options(areas, countries, formulas, selected: Filter) -> dict:
@@ -193,7 +198,9 @@ def create_app(
         }, media_type="application/manifest+json")
 
     def settings_page(request: Request, flt: Filter, send_time: str,
-                      error: str | None = None, status_code: int = 200):
+                      error: str | None = None, status_code: int = 200,
+                      enabled: bool | None = None, weekdays: list[int] | None = None,
+                      quiet: bool | None = None):
         itineraries = list(store.itineraries().values())
         runs = [{"at": digest.to_local(r.run_at, cfg.tz).strftime("%d/%m/%Y %H:%M"),
                  "label": digest.STATUS_LABELS_IT.get(r.status, r.status),
@@ -204,6 +211,12 @@ def create_app(
             "send_time": send_time,
             "error": error,
             "test_result": request.query_params.get("prova"),
+            "list_result": request.query_params.get("elenco"),
+            "list_count": _int_or_zero(request.query_params.get("n")),
+            "digest_enabled": store.digest_enabled() if enabled is None else enabled,
+            "digest_weekdays": store.digest_weekdays() if weekdays is None else weekdays,
+            "digest_quiet_mail": store.digest_quiet_mail() if quiet is None else quiet,
+            "weekdays_it": WEEKDAYS_IT,
             "recipient": cfg.digest_to,
             "runs": runs,
             **_filter_options({a for i in itineraries for a in i.areas},
@@ -222,14 +235,26 @@ def create_app(
         form = await request.form()
         flt = Filter.from_query(form.multi_items())
         send_time = str(form.get("send_time", "")).strip()
+        enabled = form.get("digest_enabled") is not None
+        quiet = form.get("digest_quiet_mail") is not None
+        weekdays = sorted({int(v) for v in form.getlist("weekday")
+                           if v.isascii() and v.isdigit() and int(v) < 7})
+        chosen = dict(enabled=enabled, weekdays=weekdays, quiet=quiet)
         try:
             parse_hhmm(send_time)
         except ValueError:
             return settings_page(request, flt, send_time,
                                  error="Orario non valido: usa il formato HH:MM.",
-                                 status_code=400)
+                                 status_code=400, **chosen)
+        if enabled and not weekdays:
+            return settings_page(request, flt, send_time,
+                                 error="Scegli almeno un giorno di invio.",
+                                 status_code=400, **chosen)
         store.set_digest_filter(flt)
         store.set_send_time(send_time)
+        store.set_digest_enabled(enabled)
+        store.set_digest_weekdays(weekdays)
+        store.set_digest_quiet_mail(quiet)
         app.state.on_send_time_change(send_time)
         return RedirectResponse("/settings", status_code=303)
 
@@ -271,6 +296,29 @@ def create_app(
             log.exception("test digest failed")
             return RedirectResponse("/settings?prova=errore", status_code=303)
         return RedirectResponse("/settings?prova=ok", status_code=303)
+
+    @app.post("/digest/current")
+    def digest_current():
+        today = digest.today_in(cfg.tz, now())
+        hidden = store.hidden_ids()
+        entries = sorted(
+            (d for d in filters.apply(store.latest_ok_departures(), store.digest_filter(),
+                                      today) if d.id not in hidden),
+            key=lambda d: (d.start_date, d.name, d.id))
+        if not entries:
+            return RedirectResponse("/settings?elenco=vuoto", status_code=303)
+        try:
+            subject, html, text = render_current(entries, store.digest_filter(),
+                                                 cfg.public_url)
+            mailer.send(subject, text, html)
+        except MailerNotConfigured as exc:
+            return RedirectResponse(
+                "/settings?elenco=" + ("destinatario" if exc.recipient_missing else "smtp"),
+                status_code=303)
+        except Exception:
+            log.exception("current list mail failed")
+            return RedirectResponse("/settings?elenco=errore", status_code=303)
+        return RedirectResponse(f"/settings?elenco=ok&n={len(entries)}", status_code=303)
 
     @app.api_route("/health", methods=["GET", "HEAD"])
     def health():

@@ -1,6 +1,7 @@
 """Run one job now: python -m amcrawler crawl|digest."""
 from __future__ import annotations
 
+import logging
 import sys
 from datetime import datetime, timezone
 
@@ -16,6 +17,7 @@ def main(argv: list[str]) -> int:
     if len(argv) != 1 or argv[0] not in ("crawl", "digest"):
         print(_USAGE, file=sys.stderr)
         return 2
+    logging.basicConfig(level=logging.INFO)
     cfg = load_config()
     store = Store(cfg.db_path)
     store.init()
@@ -23,11 +25,18 @@ def main(argv: list[str]) -> int:
     if argv[0] == "crawl":
         with source.make_client() as client:
             snap = crawl.run_crawl(store, client, now)
+        if not snap.ok:
+            print(f"crawl failed: {snap.error}", file=sys.stderr)
+            return 1
         print(f"crawl ok: snapshot {snap.id}")
     else:
         mailer = SmtpMailer(cfg.smtp_host, cfg.smtp_port, cfg.smtp_user,
                             cfg.smtp_password, cfg.digest_from)
-        print(f"digest: {digest.run_digest(store, mailer, cfg, now)}")
+        status = digest.run_digest(store, mailer, cfg, now)
+        print(f"digest: {status}")
+        # "stale" means the crawler has been failing, so it is an error too.
+        if status in ("failed", "stale"):
+            return 1
     return 0
 
 

@@ -192,3 +192,63 @@ def test_reschedule_earlier_than_now_schedules_catchup(cfg_dev, store, monkeypat
                    if i == "digest-catchup")
     finally:
         sched.shutdown(wait=False)
+
+
+# --- R3: catch-up skips a day that already has any Digest run --------------------------
+
+@pytest.mark.parametrize("status", ["stale", "failed"])
+def test_no_catchup_when_today_has_a_stale_or_failed_run(cfg_dev, store, monkeypatch,
+                                                         added_kwargs, status):
+    now = datetime(2026, 10, 28, 8, 0, tzinfo=timezone.utc)
+    sid = store.record_snapshot(now - timedelta(hours=1), [])
+    store.record_digest_run(now - timedelta(minutes=30), sid, status, [], "x")
+    app, sched = _start_at(cfg_dev, store, monkeypatch, now)
+    try:
+        app.state.on_send_time_change("07:30")
+        assert "digest-catchup" not in _added(added_kwargs)
+    finally:
+        sched.shutdown(wait=False)
+
+
+def test_catchup_when_no_run_today_even_if_yesterday_had_one(cfg_dev, store, monkeypatch,
+                                                            added_kwargs):
+    now = datetime(2026, 10, 28, 8, 0, tzinfo=timezone.utc)
+    sid = store.record_snapshot(now - timedelta(days=1), [])
+    store.record_digest_run(now - timedelta(days=1), sid, "stale", [], "x")
+    _, sched = _start_at(cfg_dev, store, monkeypatch, now)
+    try:
+        assert "digest-catchup" in _added(added_kwargs)
+    finally:
+        sched.shutdown(wait=False)
+
+
+def test_scheduled_digest_still_retries_after_a_failed_run(store):
+    from datetime import date
+
+    now = datetime(2026, 10, 28, 8, 0, tzinfo=timezone.utc)
+    store.record_digest_run(now, None, "failed", [], "x")
+    assert store.digest_run_on(date(2026, 10, 28), "Europe/London") is None
+    assert store.any_digest_run_on(date(2026, 10, 28), "Europe/London") is True
+    assert store.any_digest_run_on(date(2026, 10, 27), "Europe/London") is False
+
+
+# --- R4: the window is real elapsed time, also on DST days -----------------------------
+
+def test_catchup_window_uses_real_elapsed_time_on_a_dst_day(cfg_dev, store, monkeypatch,
+                                                            added_kwargs):
+    import dataclasses
+
+    # Europe/Rome, 2027-03-28: clocks jump 02:00 -> 03:00. send_time 01:00 CET is 00:00 UTC;
+    # 07:30 CEST is 05:30 UTC: 5.5 h really elapsed (wall clock says 6.5 h).
+    cfg = dataclasses.replace(cfg_dev, tz="Europe/Rome")
+    store.set_send_time("01:00")
+    now = datetime(2027, 3, 28, 5, 30, tzinfo=timezone.utc)
+    monkeypatch.setattr(scheduler, "crawl_job", lambda app: None)
+    monkeypatch.setattr(scheduler, "digest_job", lambda app: None)
+    monkeypatch.setattr(scheduler, "_utcnow", lambda: now)
+    app = create_app(cfg, store=store, mailer=FakeMailer(), start_scheduler=False)
+    sched = scheduler.start_scheduler(app)
+    try:
+        assert "digest-catchup" in _added(added_kwargs)
+    finally:
+        sched.shutdown(wait=False)

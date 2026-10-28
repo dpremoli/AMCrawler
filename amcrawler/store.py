@@ -276,18 +276,26 @@ class Store:
                 "SELECT * FROM digest_runs ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
         return [_run(r) for r in rows]
 
-    def digest_run_on(self, day: date, tz: str) -> DigestRun | None:
-        """The latest baseline/sent/empty run made on `day` in time zone `tz`."""
+    def _run_on(self, day: date, tz: str, statuses: tuple[str, ...] | None) -> DigestRun | None:
         zone = ZoneInfo(tz)
         start = datetime.combine(day, time.min, zone)
         end = datetime.combine(day + timedelta(days=1), time.min, zone)
+        sql = "SELECT * FROM digest_runs WHERE run_at >= ? AND run_at < ?"
+        args: list = [_ts(start), _ts(end)]
+        if statuses is not None:
+            sql += f" AND status IN ({','.join('?' * len(statuses))})"
+            args.extend(statuses)
         with self._conn() as conn:
-            row = conn.execute(
-                "SELECT * FROM digest_runs WHERE run_at >= ? AND run_at < ? "
-                f"AND status IN ({_STATUS_MARKS}) ORDER BY id DESC LIMIT 1",
-                (_ts(start), _ts(end), *_BASELINE_STATUSES),
-            ).fetchone()
+            row = conn.execute(sql + " ORDER BY id DESC LIMIT 1", args).fetchone()
         return _run(row) if row else None
+
+    def digest_run_on(self, day: date, tz: str) -> DigestRun | None:
+        """The latest baseline/sent/empty run made on `day` in time zone `tz`."""
+        return self._run_on(day, tz, _BASELINE_STATUSES)
+
+    def any_digest_run_on(self, day: date, tz: str) -> bool:
+        """Whether a Digest run of any status (also failed/stale) was made on `day`."""
+        return self._run_on(day, tz, None) is not None
 
     # hidden
     def hide(self, departure_id: str, code: str, at: datetime) -> None:

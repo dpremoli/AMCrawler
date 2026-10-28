@@ -60,9 +60,12 @@ def schedule_catchup(sched: BackgroundScheduler, app: FastAPI, send_time: str) -
     hour, minute = parse_hhmm(send_time)
     local = now.astimezone(ZoneInfo(cfg.tz))
     due = local.replace(hour=hour, minute=minute, second=0, microsecond=0)
-    if not (timedelta(0) < local - due < CATCHUP_WINDOW):
+    # real elapsed time: a wall-clock difference is an hour off on DST days
+    if not (timedelta(0) <= now - due.astimezone(timezone.utc) < CATCHUP_WINDOW):
         return
-    if store.digest_run_on(local.date(), cfg.tz) is not None:
+    # any run today (also failed/stale) stops the catch-up: it would only resend the same
+    # mail on every settings save or restart; the scheduled job may still retry later
+    if store.any_digest_run_on(local.date(), cfg.tz):
         return
     sched.add_job(digest_job, "date", args=[app], id="digest-catchup",
                   run_date=now + CATCHUP_DELAY, replace_existing=True)

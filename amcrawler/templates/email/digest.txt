@@ -1,0 +1,16 @@
+{{ subject }}
+{% for c in cards %}
+
+{{ c.name }}
+{{ c.code }} · {{ c.dates }} · {{ c.duration }}
+{{ c.participants }} · {{ c.formula }}{% if c.countries %} · {{ c.countries }}{% endif %}
+
+{% if c.notes %}
+{{ c.notes }}
+{% endif %}
+Vedi viaggio: {{ c.url }}
+{% endfor %}
+
+--
+Apri AMCrawler: {{ public_url }}
+Filtro: {{ filter_text }}

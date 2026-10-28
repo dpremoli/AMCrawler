@@ -1,0 +1,7 @@
+AMCrawler non riesce ad aggiornare i dati da {{ hours }} ore.
+{% if last_error %}
+
+Ultimo errore: {{ last_error }}
+{% endif %}
+
+Controlla i log del servizio.

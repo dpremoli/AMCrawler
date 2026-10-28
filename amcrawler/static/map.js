@@ -46,13 +46,27 @@
     return url.toString();
   }
 
-  function visible() { return mapEl.offsetWidth > 0 && mapEl.offsetHeight > 0; }
+  // The map's height follows the projection, so only the width says whether it is shown.
+  function visible() { return mapEl.offsetWidth > 0; }
+
+  function cssVar(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  function zoomButton(label, text, onClick) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "map-zoom-btn";
+    b.setAttribute("aria-label", label);
+    b.textContent = text;
+    b.addEventListener("click", onClick);
+    return b;
+  }
 
   function draw() {
     if (!world || !visible() || !window.d3 || !window.topojson) { return; }
     var d3 = window.d3;
     var w = mapEl.clientWidth;
-    var h = mapEl.clientHeight;
     drawnWidth = w;
     drawnScheme = isDark();
 
@@ -62,13 +76,15 @@
 
     var maxCount = 1;
     Object.keys(byId).forEach(function (k) { maxCount = Math.max(maxCount, byId[k].count); });
-    var dark = isDark();
     var scale = d3.scaleSequential(
-      d3.interpolateRgb(dark ? "#3d4752" : "#cdd3da", dark ? "#a9b4c0" : "#4f5964")
+      d3.interpolateRgb(cssVar("--map-low"), cssVar("--map-high"))
     ).domain([1, Math.max(maxCount, 2)]);
 
-    var projection = d3.geoNaturalEarth1().fitSize([w, h], { type: "Sphere" });
+    // Size the box to the projected world: no empty space around it.
+    var sphere = { type: "Sphere" };
+    var projection = d3.geoNaturalEarth1().fitWidth(w, sphere);
     var path = d3.geoPath(projection);
+    var h = Math.ceil(path.bounds(sphere)[1][1]);
 
     d3.select(mapEl).selectAll("*").remove();
     var svg = d3.select(mapEl).append("svg")
@@ -76,8 +92,26 @@
       .attr("role", "group")
       .attr("aria-label", "Mappa delle partenze");
 
+    var layer = svg.append("g");
+    var zoom = d3.zoom()
+      .scaleExtent([1, 8])
+      .extent([[0, 0], [w, h]])
+      .translateExtent([[0, 0], [w, h]])
+      .on("zoom", function (event) { layer.attr("transform", event.transform); });
+    svg.call(zoom);
+
+    var ctl = document.createElement("div");
+    ctl.className = "map-zoom";
+    ctl.appendChild(zoomButton("Ingrandisci", "+", function () {
+      svg.transition().duration(200).call(zoom.scaleBy, 1.6);
+    }));
+    ctl.appendChild(zoomButton("Riduci", "−", function () {
+      svg.transition().duration(200).call(zoom.scaleBy, 1 / 1.6);
+    }));
+    mapEl.appendChild(ctl);
+
     var shown = {};
-    svg.append("g").selectAll("path").data(features).enter().append("path")
+    layer.selectAll("path").data(features).enter().append("path")
       .attr("d", path)
       .attr("class", function (f) {
         return "map-country" + (byId[String(f.id)] ? " has" : "");
@@ -85,10 +119,9 @@
       .each(function (f) {
         var t = byId[String(f.id)];
         var node = d3.select(this);
-        var fill = "none";
         if (t) {
           shown[String(f.id)] = true;
-          fill = t.isNew ? "var(--accent)" : scale(t.count);
+          node.style("fill", t.isNew ? "var(--accent)" : scale(t.count));
           var name = data.names[t.code] || t.code;
           var label = name + " · " + plural(t.count);
           node.append("title").text(label);
@@ -101,7 +134,6 @@
               }
             });
         }
-        node.style("fill", fill);
       });
 
     var missing = Object.keys(byId).filter(function (k) { return !shown[k]; })

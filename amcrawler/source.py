@@ -115,7 +115,7 @@ def fetch_uncovered(client: httpx.Client, pause: float = 1.0) -> list[Departure]
 
 
 def parse_catalogue(js_text: str) -> list[Itinerary]:
-    """Parse the `BASES` script into Itineraries."""
+    """Parse the `BASES` script into Itineraries (never empty)."""
     try:
         marker = js_text.index("bases:")
         start = js_text.index("[", marker)
@@ -136,6 +136,8 @@ def parse_catalogue(js_text: str) -> list[Itinerary]:
             )
     except (KeyError, TypeError, ValueError) as exc:
         raise SourceError(f"unexpected catalogue: {exc!r}") from exc
+    if not itineraries:
+        raise SourceError("empty catalogue")
     return itineraries
 
 

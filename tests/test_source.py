@@ -99,3 +99,8 @@ def test_fetch_uncovered_rejects_zero_page_size():
         return_value=httpx.Response(200, json=payload))
     with pytest.raises(SourceError):
         fetch_uncovered(make_client(), pause=0)
+
+
+def test_parse_catalogue_empty_is_a_source_error():
+    with pytest.raises(SourceError, match="empty catalogue"):
+        parse_catalogue("var x = {bases: []};")

@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 
 import httpx
 
+from .models import Departure
 from .source import SourceError, fetch_catalogue, fetch_uncovered
 from .store import SnapshotInfo, Store
 
@@ -21,8 +22,6 @@ def run_crawl(store: Store, client: httpx.Client, now: datetime,
     if fetched is None or now - fetched > CATALOGUE_MAX_AGE:
         try:
             catalogue = fetch_catalogue(client)
-            if not catalogue:
-                raise SourceError("empty catalogue")
             store.save_catalogue(catalogue, now)
         except SourceError as exc:
             log.warning("catalogue refresh failed: %s", exc)
@@ -35,8 +34,10 @@ def run_crawl(store: Store, client: httpx.Client, now: datetime,
         return store.latest_snapshot()
 
     # pagination over live data can repeat a Departure: keep the first occurrence
-    seen: set[str] = set()
-    departures = [d for d in departures if not (d.id in seen or seen.add(d.id))]
+    unique: dict[str, Departure] = {}
+    for d in departures:
+        unique.setdefault(d.id, d)
+    departures = list(unique.values())
 
     previous = store.latest_ok_snapshot()
     if not departures and previous and previous.departure_count >= SANITY_MIN_PREVIOUS:

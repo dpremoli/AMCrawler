@@ -5,7 +5,7 @@ import json
 import sqlite3
 from contextlib import closing, contextmanager
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from typing import Iterator
 from zoneinfo import ZoneInfo
 
@@ -65,19 +65,19 @@ def _ts(value: datetime) -> str:
     return value.astimezone(timezone.utc).isoformat()
 
 
-def _parse_ts(value: str) -> datetime:
-    return datetime.fromisoformat(value)
+def _json_tuple(raw: str | None) -> tuple[str, ...]:
+    return tuple(json.loads(raw)) if raw else ()
 
 
 def _snapshot(row: sqlite3.Row | None) -> SnapshotInfo | None:
     if row is None:
         return None
-    return SnapshotInfo(row["id"], _parse_ts(row["taken_at"]), bool(row["ok"]),
+    return SnapshotInfo(row["id"], datetime.fromisoformat(row["taken_at"]), bool(row["ok"]),
                         row["error"], row["departure_count"])
 
 
 def _run(row: sqlite3.Row) -> DigestRun:
-    return DigestRun(row["id"], _parse_ts(row["run_at"]), row["snapshot_id"],
+    return DigestRun(row["id"], datetime.fromisoformat(row["run_at"]), row["snapshot_id"],
                      row["status"], row["entry_count"], row["error"])
 
 
@@ -115,15 +115,15 @@ class Store:
     def catalogue_fetched_at(self) -> datetime | None:
         with self._conn() as conn:
             row = conn.execute("SELECT MAX(fetched_at) AS t FROM itineraries").fetchone()
-        return _parse_ts(row["t"]) if row["t"] else None
+        return datetime.fromisoformat(row["t"]) if row["t"] else None
 
     def itineraries(self) -> dict[str, Itinerary]:
         with self._conn() as conn:
             rows = conn.execute("SELECT * FROM itineraries").fetchall()
         return {
             r["id"]: Itinerary(r["id"], r["code"], r["name"], r["formula"],
-                               tuple(json.loads(r["areas_json"])),
-                               tuple(json.loads(r["countries_json"])),
+                               _json_tuple(r["areas_json"]),
+                               _json_tuple(r["countries_json"]),
                                bool(r["coordinator_free"]))
             for r in rows
         }
@@ -175,8 +175,8 @@ class Store:
                 end_date=date.fromisoformat(r["end_date"]),
                 duration=r["duration"], participants=r["participants"],
                 max_participants=r["max_participants"], notes=r["notes"],
-                areas=tuple(json.loads(r["areas_json"])) if r["areas_json"] else (),
-                countries=tuple(json.loads(r["countries_json"])) if r["countries_json"] else (),
+                areas=_json_tuple(r["areas_json"]),
+                countries=_json_tuple(r["countries_json"]),
             )
             for r in rows
         ]
@@ -194,12 +194,11 @@ class Store:
     def prune_snapshots(self, before: datetime) -> int:
         cutoff = _ts(before)
         with self._conn() as conn:
-            ids = [r["id"] for r in conn.execute(
-                "SELECT id FROM snapshots WHERE taken_at < ?", (cutoff,))]
-            for sid in ids:
-                conn.execute("DELETE FROM snapshot_departures WHERE snapshot_id = ?", (sid,))
-                conn.execute("DELETE FROM snapshots WHERE id = ?", (sid,))
-        return len(ids)
+            conn.execute(
+                "DELETE FROM snapshot_departures WHERE snapshot_id IN "
+                "(SELECT id FROM snapshots WHERE taken_at < ?)", (cutoff,))
+            return conn.execute(
+                "DELETE FROM snapshots WHERE taken_at < ?", (cutoff,)).rowcount
 
     # digest runs
     def record_digest_run(self, run_at: datetime, snapshot_id: int | None, status: str,
@@ -248,18 +247,17 @@ class Store:
         return [_run(r) for r in rows]
 
     def digest_run_on(self, day: date, tz: str) -> DigestRun | None:
+        """The latest baseline/sent/empty run made on `day` in time zone `tz`."""
         zone = ZoneInfo(tz)
+        start = datetime.combine(day, time.min, zone)
+        end = datetime.combine(day + timedelta(days=1), time.min, zone)
         with self._conn() as conn:
-            rows = conn.execute(
-                f"SELECT * FROM digest_runs WHERE status IN ({_STATUS_MARKS}) "
-                "ORDER BY id DESC",
-                _BASELINE_STATUSES,
-            ).fetchall()
-        for r in rows:
-            run = _run(r)
-            if run.run_at.astimezone(zone).date() == day:
-                return run
-        return None
+            row = conn.execute(
+                "SELECT * FROM digest_runs WHERE run_at >= ? AND run_at < ? "
+                f"AND status IN ({_STATUS_MARKS}) ORDER BY id DESC LIMIT 1",
+                (_ts(start), _ts(end), *_BASELINE_STATUSES),
+            ).fetchone()
+        return _run(row) if row else None
 
     # hidden
     def hide(self, departure_id: str, code: str, at: datetime) -> None:

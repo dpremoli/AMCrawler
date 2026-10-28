@@ -53,7 +53,21 @@ def test_status_strip(client):
 
 def test_status_strip_red_when_latest_snapshot_failed(client, seeded_store):
     seeded_store.record_snapshot(NOW, None, "boom")
-    assert "status-bad" in client.get("/").text
+    text = client.get("/").text
+    assert "status-bad" in text
+    assert "Aggiornato alle 10:00" in text  # last OK crawl, not the failed one at 12:00
+    assert "12:00" not in text.split('class="status', 1)[1].split("</p>", 1)[0]
+    assert "ultimo aggiornamento non riuscito" in text
+
+
+def test_status_strip_without_any_ok_snapshot(cfg_dev, store):
+    store.record_snapshot(NOW, None, "boom")
+    c = TestClient(create_app(cfg_dev, store=store, mailer=FakeMailer(),
+                              start_scheduler=False, now=lambda: NOW))
+    text = c.get("/").text
+    assert "Nessun aggiornamento riuscito" in text
+    assert "status-bad" in text
+    assert "Aggiornato alle" not in text
 
 
 def test_hide_and_unhide(client):
@@ -93,7 +107,8 @@ def test_map_data_embedded(client):
     assert data["numeric"]["JP"] == "392"
     assert data["names"]["JP"] == "Giappone"
     by_id = {d["id"]: d for d in data["departures"]}
-    assert by_id["d2"] == {"id": "d2", "countries": ["JP"], "new": False}
+    assert by_id["d2"] == {"id": "d2", "name": "Giappone Discovery", "countries": ["JP"],
+                         "new": False}
     assert by_id["d3"]["new"] is True
 
 
@@ -121,3 +136,19 @@ def test_auth_enforced_when_not_dev(cfg_dev, seeded_store):
     assert c.get("/").status_code == 403
     assert c.post("/hide/d1").status_code == 403
     assert c.get("/health").status_code == 200
+
+
+def test_hostile_text_is_escaped(cfg_dev, store):
+    from tests.conftest import dep, itin
+
+    evil = "</script><img src=x onerror=alert(1)>"
+    store.save_catalogue([itin()], NOW)
+    store.record_snapshot(NOW, [dep(id="x1", name=evil, notes=evil)])
+    c = TestClient(create_app(cfg_dev, store=store, mailer=FakeMailer(),
+                              start_scheduler=False, now=lambda: NOW))
+    html = c.get("/").text
+    assert evil not in html
+    assert "&lt;/script&gt;&lt;img src=x onerror=alert(1)&gt;" in html.split(
+        'data-id="x1"', 1)[1].split("</article>", 1)[0]
+    data = _map_data(html)
+    assert data["departures"][0]["name"] == evil

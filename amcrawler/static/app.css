@@ -115,3 +115,4 @@ h1, h2 { margin: 0; }
   #map { height: calc(100vh - 100px); }
   .sheet { margin: auto; border-radius: 16px; }
 }
+[hidden] { display: none !important; }

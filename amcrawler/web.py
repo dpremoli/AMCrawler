@@ -118,15 +118,18 @@ def create_app(
 
     def status_strip(shown: int, new: int) -> dict:
         latest = store.latest_snapshot()
+        last_ok = store.latest_ok_snapshot()
         runs = store.recent_digest_runs(1)
         digest_bad = bool(runs) and runs[0].status in _BAD_DIGEST
-        bad = (latest is not None and not latest.ok) or digest_bad
-        if latest is None:
-            return {"text": "Nessun aggiornamento ancora", "bad": bad}
-        at = latest.taken_at.astimezone(ZoneInfo(cfg.tz)).strftime("%H:%M")
-        text = (f"Aggiornato alle {at} · {_plural(shown, 'partenza', 'partenze')}"
-                f" · {_plural(new, 'nuova', 'nuove')}")
-        if not latest.ok:
+        crawl_bad = latest is not None and not latest.ok
+        bad = crawl_bad or digest_bad
+        if last_ok is None:
+            text = "Nessun aggiornamento riuscito"
+        else:
+            at = last_ok.taken_at.astimezone(ZoneInfo(cfg.tz)).strftime("%H:%M")
+            text = (f"Aggiornato alle {at} · {_plural(shown, 'partenza', 'partenze')}"
+                    f" · {_plural(new, 'nuova', 'nuove')}")
+        if crawl_bad:
             text += " · ultimo aggiornamento non riuscito"
         elif digest_bad:
             text += " · ultimo Digest non riuscito"
@@ -148,7 +151,7 @@ def create_app(
         codes = {c for i in itineraries for c in i.countries}
         map_codes = sorted({c for d in results for c in d.countries})
         map_data = {
-            "departures": [{"id": d.id, "countries": list(d.countries),
+            "departures": [{"id": d.id, "name": d.name, "countries": list(d.countries),
                             "new": d.id in badged} for d in results],
             "names": {c: country_name_it(c) for c in map_codes},
             "numeric": {c: iso_numeric(c) for c in map_codes},

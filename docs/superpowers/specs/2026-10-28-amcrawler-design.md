@@ -122,7 +122,7 @@ itineraries(id TEXT PK, code TEXT, name TEXT, formula TEXT,
             fetched_at TEXT)
 snapshots(id INTEGER PK, taken_at TEXT, ok INT, error TEXT, departure_count INT)
 snapshot_departures(snapshot_id INT, departure_id TEXT, itinerary_id TEXT,
-            code TEXT, name TEXT, formula TEXT, start_date TEXT, end_date TEXT,
+            itinerary_code TEXT, code TEXT, name TEXT, formula TEXT, start_date TEXT, end_date TEXT,
             duration INT, participants INT, max_participants INT, notes TEXT,
             PRIMARY KEY(snapshot_id, departure_id))
 digest_runs(id INTEGER PK, run_at TEXT, snapshot_id INT,
@@ -310,7 +310,7 @@ are sent. No service worker, no offline mode.
 
 - `Dockerfile`: `python:3.12-slim`, non-root user, `pip install` from pinned
   `requirements.txt`, `HEALTHCHECK` curl-less (python one-liner on `/health`),
-  `CMD uvicorn amcrawler.web:app --host 0.0.0.0 --port 8000 --workers 1`.
+  `CMD uvicorn --factory amcrawler.web:build_app --host 0.0.0.0 --port 8000 --workers 1`.
 - `docker-compose.yml`: service/container `amcrawler`, `build: .`,
   `env_file: .env`, volume `/mnt/user/appdata/amcrawler/data:/data`,
   network `proxy` (external), `restart: unless-stopped`, **no `ports`**.

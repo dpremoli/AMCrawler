@@ -379,3 +379,14 @@ def test_hidden_view_card_offers_restore(client, seeded_store):
     seeded_store.hide("d1", "2026-0001", NOW)
     card = _card(client.get("/?nascoste=1").text, "d1")
     assert 'data-action="unhide" data-id="d1"' in card and "Ripristina" in card
+
+
+def test_card_without_known_capacity_omits_the_slash(client, seeded_store):
+    seeded_store.record_snapshot(NOW, [
+        dep(id="d8", participants=3, max_participants=0),
+        dep(id="d9", participants=1, max_participants=0)])
+    html = client.get("/").text
+    many, one = _card(html, "d8"), _card(html, "d9")
+    assert ">3 iscritti<" in many and "3/0" not in many
+    assert ">1 iscritto<" in one and "1/0" not in one
+    assert 'aria-label="3 iscritti"' in many

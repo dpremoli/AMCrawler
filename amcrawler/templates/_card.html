@@ -12,7 +12,7 @@
     <div class="end"><div class="ww">{{ weekday_abbr(d.end_date) }}</div><div class="dd">{{ card_date(d.end_date, today) }}</div></div>
   </div>
   <div class="stats">
-    <span>{{ d.participants }}/{{ d.max_participants }} {{ "iscritto" if d.participants == 1 else "iscritti" }}</span>
+    <span>{{ d.participants }}{% if d.max_participants > 0 %}/{{ d.max_participants }}{% endif %} {{ "iscritto" if d.participants == 1 else "iscritti" }}</span>
     <span class="{{ 'soon' if soon else 'later' }}">{{ when }}</span>
   </div>
   {% if blocks is not none %}

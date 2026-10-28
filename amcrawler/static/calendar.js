@@ -68,8 +68,14 @@
       " · " + plural(count);
   }
 
+  // The selection survives its day losing every Departure; it only moves with the month.
+  function keepSelection(month, selected, dates) {
+    if (selected && monthOf(selected) === month) { return selected; }
+    return firstDayIn(month, dates);
+  }
+
   var api = {
-    openingMonth: openingMonth, monthRange: monthRange, firstDayIn: firstDayIn,
+    keepSelection: keepSelection, openingMonth: openingMonth, monthRange: monthRange, firstDayIn: firstDayIn,
     monthWeeks: monthWeeks, shiftMonth: shiftMonth, monthTitle: monthTitle,
     dayLabel: dayLabel, selectionLine: selectionLine
   };
@@ -187,13 +193,11 @@
     if (reset || month === null) { month = openingMonth(today, dates); }
     if (month < range[0]) { month = range[0]; }
     if (month > range[1]) { month = range[1]; }
-    if (!selected || monthOf(selected) !== month || !counts[selected]) {
-      selected = firstDayIn(month, dates);
-    }
+    selected = keepSelection(month, selected, dates);
     title.textContent = monthTitle(month);
     prev.disabled = month <= range[0];
     next.disabled = month >= range[1];
-    none.hidden = selected !== null;
+    none.hidden = firstDayIn(month, dates) !== null;
     paintGrid(counts);
     paintSelection(counts);
     filterList();
@@ -216,7 +220,18 @@
 
   // Hide / unhide / undo add and remove cards: keep the calendar in step.
   if (window.MutationObserver) {
-    new MutationObserver(function () { render(false); }).observe(list, { childList: true });
+    new MutationObserver(function (mutations) {
+      // an undone hide puts a card back: jump to its day so it does not stay filtered out
+      mutations.forEach(function (m) {
+        Array.prototype.forEach.call(m.addedNodes, function (n) {
+          if (n.nodeType === 1 && n.matches(".card[data-start]")) {
+            selected = n.getAttribute("data-start");
+            month = monthOf(selected);
+          }
+        });
+      });
+      render(false);
+    }).observe(list, { childList: true });
   }
   document.addEventListener("amc:view", function () { render(false); });
   render(true);

@@ -88,3 +88,16 @@ class TestCalendarRules:
         assert _js('c.dayLabel("2026-11-13", 2)') == "13 novembre, 2 partenze"
         assert _js('c.dayLabel("2026-11-13", 1)') == "13 novembre, 1 partenza"
         assert _js('c.selectionLine("2026-11-13", 2)') == "Venerdì 13 novembre · 2 partenze"
+
+
+@pytest.mark.skipif(node is None, reason="node is not installed")
+def test_selection_stays_on_a_day_that_lost_its_last_departure():
+    dates = json.dumps(["2026-11-20"])
+    assert _js('c.keepSelection("2026-11", "2026-11-13", ' + dates + ")") == "2026-11-13"
+    assert _js('c.keepSelection("2026-11", null, ' + dates + ")") == "2026-11-20"
+    assert _js('c.keepSelection("2026-12", "2026-11-13", ' + dates + ")") is None
+
+
+def test_list_empty_message_is_hidden_in_calendar_view():
+    css = (STATIC / "app.css").read_text(encoding="utf-8")
+    assert '.layout[data-view="cal"] .list .empty { display: none; }' in css

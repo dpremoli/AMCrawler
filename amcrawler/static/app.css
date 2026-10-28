@@ -66,6 +66,7 @@ h1, h2 { margin: 0; }
 .layout[data-view="list"] .map-pane, .layout[data-view="cal"] .map-pane { display: none; }
 .layout[data-view="map"] .list { display: none; }
 .cal-pane { display: none; }
+.layout[data-view="cal"] .list .empty { display: none; }
 .layout[data-view="cal"] .cal-pane { display: block; margin-bottom: 12px; }
 .card {
   display: grid; gap: 8px; background: var(--surface); border: 1px solid var(--line);

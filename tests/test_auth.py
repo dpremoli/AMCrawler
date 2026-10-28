@@ -52,8 +52,8 @@ def _client(verifier, dev_no_auth=False):
     return TestClient(app)
 
 
-def _verifier(key, fetcher=None):
-    return AccessVerifier(TEAM, AUD, jwks_fetcher=fetcher or (lambda: _jwks(key, "k1")))
+def _verifier(key, fetcher=None, **kw):
+    return AccessVerifier(TEAM, AUD, jwks_fetcher=fetcher or (lambda: _jwks(key, "k1")), **kw)
 
 
 def test_valid_header_token_allowed(key):
@@ -124,7 +124,7 @@ def test_unknown_kid_refetches_once(key):
         calls.append(1)
         return {"keys": []} if len(calls) == 1 else _jwks(key, "k1")
 
-    v = _verifier(key, fetcher)
+    v = _verifier(key, fetcher, unknown_kid_refetch_interval=0)
     assert v.verify(_token(key))["iss"] == f"https://{TEAM}"
     assert len(calls) == 2
 
@@ -136,7 +136,7 @@ def test_unknown_kid_still_unknown_raises_after_one_refetch(key):
         calls.append(1)
         return {"keys": []}
 
-    v = _verifier(key, fetcher)
+    v = _verifier(key, fetcher, unknown_kid_refetch_interval=0)
     with pytest.raises(AuthError):
         v.verify(_token(key))
     assert len(calls) == 2
@@ -185,3 +185,80 @@ def test_failure_logs_reason_only(key, caplog):
     assert tok not in caplog.text
     assert "owner@example.com" not in caplog.text
     assert "audience" in caplog.text
+
+
+def test_first_load_works_with_small_monotonic(key, monkeypatch):
+    # Host up for only 120 s: the first load must not depend on uptime.
+    monkeypatch.setattr("amcrawler.auth.time.monotonic", lambda: 120.0)
+    calls = []
+
+    def fetcher():
+        calls.append(1)
+        return _jwks(key, "k1")
+
+    v = _verifier(key, fetcher)
+    v.verify(_token(key))
+    assert len(calls) == 1
+
+
+def test_cache_expiry_refetches(key, monkeypatch):
+    now = [1000.0]
+    monkeypatch.setattr("amcrawler.auth.time.monotonic", lambda: now[0])
+    calls = []
+
+    def fetcher():
+        calls.append(1)
+        return _jwks(key, "k1")
+
+    v = _verifier(key, fetcher, cache_seconds=3600)
+    v.verify(_token(key))
+    now[0] += 3599
+    v.verify(_token(key))
+    assert len(calls) == 1
+    now[0] += 2
+    v.verify(_token(key))
+    assert len(calls) == 2
+
+
+def test_unknown_kid_refetch_throttled(key):
+    calls = []
+
+    def fetcher():
+        calls.append(1)
+        return _jwks(key, "k1")
+
+    v = _verifier(key, fetcher)  # default 60 s interval
+    for i in range(50):
+        with pytest.raises(AuthError):
+            v.verify(_token(key, kid=f"rnd{i}"))
+    assert len(calls) <= 2
+
+
+def test_unknown_kid_refetch_allowed_after_interval(key, monkeypatch):
+    now = [1000.0]
+    monkeypatch.setattr("amcrawler.auth.time.monotonic", lambda: now[0])
+    calls = []
+
+    def fetcher():
+        calls.append(1)
+        return _jwks(key, "k1")
+
+    v = _verifier(key, fetcher)
+    with pytest.raises(AuthError):
+        v.verify(_token(key, kid="nope"))
+    n = len(calls)
+    now[0] += 61
+    with pytest.raises(AuthError):
+        v.verify(_token(key, kid="nope"))
+    assert len(calls) == n + 1
+
+
+def test_health_post_not_exempt(key):
+    app = FastAPI()
+    install_auth(app, _verifier(key), False)
+
+    @app.post("/health")
+    def h():
+        return {}
+
+    assert TestClient(app).post("/health").status_code == 403

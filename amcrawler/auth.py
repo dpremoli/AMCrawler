@@ -35,38 +35,64 @@ def _default_fetcher(team_domain: str) -> Callable[[], dict]:
 class AccessVerifier:
     def __init__(self, team_domain: str, aud: str,
                  jwks_fetcher: Callable[[], dict] | None = None,
-                 cache_seconds: int = 3600) -> None:
+                 cache_seconds: int = 3600,
+                 unknown_kid_refetch_interval: float = 60.0) -> None:
         self.team_domain = team_domain
         self.aud = aud
         self._fetcher = jwks_fetcher or _default_fetcher(team_domain)
         self._cache_seconds = cache_seconds
-        self._keys: dict[str, object] = {}
-        self._fetched_at = 0.0
-        self._lock = threading.Lock()
+        self._min_refetch = unknown_kid_refetch_interval
+        self._keys: dict[str, object] | None = None  # None: never loaded
+        self._fetched_at: float | None = None  # last successful load
+        self._last_attempt: float | None = None  # last fetch attempt (any outcome)
+        self._lock = threading.Lock()  # guards the fields above, never held during I/O
 
-    def _refresh(self) -> None:
+    def _fetch_keys(self) -> dict[str, object]:
         try:
             jwks = self._fetcher()
             keys = {}
             for jwk in jwks["keys"]:
                 if jwk.get("kty") == "RSA" and jwk.get("kid"):
                     keys[jwk["kid"]] = jwt.PyJWK(jwk).key
+            return keys
         except Exception as exc:  # network, JSON or shape errors: all mean "cannot verify"
             raise AuthError("jwks unavailable") from exc
-        self._keys = keys
-        self._fetched_at = time.monotonic()
+
+    def _refresh(self) -> None:
+        keys = self._fetch_keys()  # network I/O outside the lock
+        with self._lock:
+            self._keys = keys
+            self._fetched_at = time.monotonic()
 
     def _key_for(self, kid: str):
         with self._lock:
-            if time.monotonic() - self._fetched_at > self._cache_seconds:
-                self._refresh()
-            key = self._keys.get(kid)
-            if key is None:  # unknown kid: key rotation, refetch once
-                self._refresh()
-                key = self._keys.get(kid)
-            if key is None:
+            now = time.monotonic()
+            keys = self._keys
+            stale = (self._fetched_at is None
+                     or now - self._fetched_at > self._cache_seconds)
+            if keys is None or stale:
+                self._last_attempt = now
+                load = True
+            else:
+                load = False
+        if load:
+            self._refresh()
+        with self._lock:
+            key = (self._keys or {}).get(kid)
+            if key is not None:
+                return key
+            # Unknown kid: key rotation, refetch, but at most once per interval.
+            now = time.monotonic()
+            if (self._last_attempt is not None
+                    and now - self._last_attempt < self._min_refetch):
                 raise AuthError("unknown key id")
-            return key
+            self._last_attempt = now
+        self._refresh()
+        with self._lock:
+            key = (self._keys or {}).get(kid)
+        if key is None:
+            raise AuthError("unknown key id")
+        return key
 
     def verify(self, token: str) -> dict:
         try:
@@ -103,7 +129,7 @@ def install_auth(app: FastAPI, verifier: AccessVerifier | None, dev_no_auth: boo
 
     @app.middleware("http")
     async def access_middleware(request: Request, call_next):
-        if request.url.path == "/health":
+        if request.url.path == "/health" and request.method in ("GET", "HEAD"):
             return await call_next(request)
         if dev_no_auth:
             logger.warning("AMC_DEV_NO_AUTH attivo: autenticazione disattivata")

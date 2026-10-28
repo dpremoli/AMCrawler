@@ -9,6 +9,7 @@
 <main class="page">
   {% if error %}<p class="notice notice-bad" role="alert">{{ error }}</p>{% endif %}
   {% if test_result == "ok" %}<p class="notice" role="status">Email di prova inviata.</p>
+  {% elif test_result == "destinatario" %}<p class="notice notice-bad" role="alert">DIGEST_TO non impostato.</p>
   {% elif test_result == "errore" %}<p class="notice notice-bad" role="alert">Invio non riuscito.</p>{% endif %}
 
   <section class="digest-tools">

@@ -103,10 +103,10 @@
     var ctl = document.createElement("div");
     ctl.className = "map-zoom";
     ctl.appendChild(zoomButton("Ingrandisci", "+", function () {
-      svg.transition().duration(200).call(zoom.scaleBy, 1.6);
+      svg.call(zoom.scaleBy, 1.6);
     }));
     ctl.appendChild(zoomButton("Riduci", "−", function () {
-      svg.transition().duration(200).call(zoom.scaleBy, 1 / 1.6);
+      svg.call(zoom.scaleBy, 1 / 1.6);
     }));
     mapEl.appendChild(ctl);
 

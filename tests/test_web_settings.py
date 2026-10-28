@@ -162,3 +162,16 @@ def test_settings_tools_come_before_filter_form(client):
     html = client.get("/settings").text
     for marker in ('name="send_time"', "Anteprima", "Invia prova"):
         assert html.index(marker) < html.index("Filtro del Digest")
+
+
+def test_digest_test_without_recipient_explains(cfg_dev, seeded_store):
+    import dataclasses
+
+    mailer = FakeMailer()
+    cfg = dataclasses.replace(cfg_dev, digest_to="")
+    c = TestClient(create_app(cfg, store=seeded_store, mailer=mailer,
+                              start_scheduler=False, now=lambda: NOW),
+                   follow_redirects=True)
+    r = c.post("/digest/test")
+    assert r.status_code == 200 and "DIGEST_TO non impostato" in r.text
+    assert mailer.sent == []

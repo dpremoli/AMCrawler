@@ -293,6 +293,8 @@ def create_app(
 
     @app.post("/digest/test")
     def digest_test():
+        if not cfg.digest_to:
+            return RedirectResponse("/settings?prova=destinatario", status_code=303)
         try:
             subject, html, text, _count = pending_digest()
             mailer.send(cfg.digest_to, "[PROVA] " + subject, "[PROVA]\n\n" + text, html)

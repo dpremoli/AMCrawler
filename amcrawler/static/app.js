@@ -13,6 +13,7 @@
   var layout = document.querySelector(".layout");
   var segButtons = document.querySelectorAll(".seg-btn");
   function setView(view) {
+    if (!layout) { return; }
     layout.setAttribute("data-view", view);
     segButtons.forEach(function (b) {
       b.setAttribute("aria-pressed", String(b.getAttribute("data-view") === view));
@@ -25,12 +26,14 @@
 
   // Filter bottom sheet.
   var sheet = document.getElementById("filters");
-  document.getElementById("open-filters").addEventListener("click", function () {
-    sheet.showModal();
-  });
-  document.getElementById("close-filters").addEventListener("click", function () {
-    sheet.close();
-  });
+  var openFilters = document.getElementById("open-filters");
+  var closeFilters = document.getElementById("close-filters");
+  if (sheet && openFilters) {
+    openFilters.addEventListener("click", function () { sheet.showModal(); });
+  }
+  if (sheet && closeFilters) {
+    closeFilters.addEventListener("click", function () { sheet.close(); });
+  }
 
   // Notes: tap to expand.
   document.addEventListener("click", function (e) {
@@ -54,11 +57,13 @@
   var undo = null;
 
   function closeSnackbar() {
+    if (!snackbar) { return; }
     snackbar.hidden = true;
     undo = null;
     if (timer) { clearTimeout(timer); timer = null; }
   }
   function showSnackbar(text, onUndo) {
+    if (!snackbar) { return; }
     closeSnackbar();
     snackText.textContent = text;
     undoBtn.hidden = !onUndo;
@@ -66,11 +71,13 @@
     snackbar.hidden = false;
     timer = setTimeout(closeSnackbar, 5000);
   }
-  undoBtn.addEventListener("click", function () {
-    var fn = undo;
-    closeSnackbar();
-    if (fn) { fn(); }
-  });
+  if (undoBtn) {
+    undoBtn.addEventListener("click", function () {
+      var fn = undo;
+      closeSnackbar();
+      if (fn) { fn(); }
+    });
+  }
 
   function moveCard(card, action, reverse, text) {
     var parent = card.parentNode;

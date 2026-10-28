@@ -282,4 +282,7 @@ def create_app(
 
 
 def build_app() -> FastAPI:
+    # uvicorn only configures its own loggers: make crawl/digest INFO lines reach the logs
+    logging.basicConfig(level=logging.INFO,
+                        format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     return create_app(load_config())

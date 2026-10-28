@@ -214,3 +214,16 @@ def test_ui_uses_one_term_for_the_digest(client):
     text = client.get("/").text
     assert "Usa per il Digest" in text
     assert "riepilogo" not in text.lower()
+
+
+def test_build_app_configures_logging(monkeypatch):
+    import logging
+
+    from amcrawler import web
+
+    calls = []
+    monkeypatch.setattr(logging, "basicConfig", lambda **kw: calls.append(kw))
+    monkeypatch.setattr(web, "load_config", lambda: "cfg")
+    monkeypatch.setattr(web, "create_app", lambda cfg: ("app", cfg))
+    assert web.build_app() == ("app", "cfg")
+    assert calls and calls[0]["level"] == logging.INFO

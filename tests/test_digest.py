@@ -183,3 +183,25 @@ def test_empty_digest_to_on_stale_path_records_error_without_mailing(store):
     run = store.recent_digest_runs()[0]
     assert run.status == "stale" and run.error == "DIGEST_TO non impostato"
     assert mailer.sent == []
+
+
+def test_empty_snapshot_never_becomes_the_baseline(store):
+    d1, d2, d3 = dep(id="d1"), dep(id="d2"), dep(id="d3", name="Terza")
+    s1 = store.record_snapshot(DIGEST_NOW - timedelta(days=3), [d1, d2])
+    store.record_digest_run(DIGEST_NOW - timedelta(days=3), s1, "baseline", [])
+    store.record_snapshot(DIGEST_NOW - timedelta(hours=1), [])  # accepted empty snapshot
+    mailer = FakeMailer()
+    assert run_digest(store, mailer, CFG, DIGEST_NOW) == "empty"
+    assert store.baseline_snapshot_id() == s1
+    assert mailer.sent == []
+    later = DIGEST_NOW + timedelta(days=1)
+    s3 = store.record_snapshot(later - timedelta(hours=1), [d1, d2, d3])
+    assert run_digest(store, mailer, CFG, later) == "sent"
+    assert store.last_sent_entry_ids() == {"d3"}
+    assert store.baseline_snapshot_id() == s3
+
+
+def test_first_ever_run_with_no_departures_is_a_baseline(store):
+    sid = store.record_snapshot(DIGEST_NOW - timedelta(hours=1), [])
+    assert run_digest(store, FakeMailer(), CFG, DIGEST_NOW) == "baseline"
+    assert store.baseline_snapshot_id() == sid

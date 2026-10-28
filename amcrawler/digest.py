@@ -88,6 +88,11 @@ def _run(store: Store, mailer, cfg: Config, now: datetime, today: date) -> str:
     if not store.has_digest_runs():
         store.record_digest_run(now, last_ok.id, "baseline", [])
         return "baseline"
+    if last_ok.departure_count == 0:
+        # an empty snapshot is never the baseline: keep the current one, so a recovery
+        # does not report every Departure as a New Entry
+        store.record_digest_run(now, store.baseline_snapshot_id(), "empty", [])
+        return "empty"
     entries = compute_new_entries(store, today)
     if not entries:
         store.record_digest_run(now, last_ok.id, "empty", [])

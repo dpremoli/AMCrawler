@@ -19,15 +19,26 @@ SANITY_MIN_PREVIOUS = 10
 SANITY_MIN_RATIO = 0.5
 CONFIRM_SUSPICIOUS = 2  # earlier rejections that must agree before a drop is accepted
 CONFIRM_TOLERANCE = 0.10
+CONFIRM_SPAN = timedelta(hours=24)  # the agreeing rejections must reach back this far
 SUSPICIOUS_ERRORS = ("suspicious empty result", "suspicious drop")
 
 
-def _confirmed(store: Store, count: int) -> bool:
-    """True when the last CONFIRM_SUSPICIOUS crawls were also rejected as suspicious with
-    counts within the tolerance of `count` (exactly 0 for an empty result)."""
-    earlier = store.recent_rejected_counts(SUSPICIOUS_ERRORS, CONFIRM_SUSPICIOUS)
-    return (len(earlier) == CONFIRM_SUSPICIOUS
-            and all(abs(c - count) <= CONFIRM_TOLERANCE * count for c in earlier))
+def _confirmed(store: Store, count: int, now: datetime) -> timedelta | None:
+    """The span of the current streak when this suspicious result is confirmed, else None.
+
+    The streak is the trailing run of suspicious rejections since the last OK snapshot
+    whose counts are all within CONFIRM_TOLERANCE of `count` (0 only matches 0). It confirms
+    when it holds at least CONFIRM_SUSPICIOUS rejections and its oldest was taken at least
+    CONFIRM_SPAN ago, so extra crawls (startup, CLI) can never shorten the wait."""
+    streak = []
+    for snap in store.rejected_since_last_ok(SUSPICIOUS_ERRORS):  # newest first
+        if abs(snap.departure_count - count) > CONFIRM_TOLERANCE * count:
+            break
+        streak.append(snap)
+    if len(streak) < CONFIRM_SUSPICIOUS:
+        return None
+    span = now - streak[-1].taken_at
+    return span if span >= CONFIRM_SPAN else None
 
 
 def _refresh_catalogue(store: Store, client: httpx.Client, now: datetime) -> None:
@@ -80,9 +91,10 @@ def run_crawl(store: Store, client: httpx.Client, now: datetime,
             reason = "suspicious empty result"
         elif len(departures) < previous.departure_count * SANITY_MIN_RATIO:
             reason = "suspicious drop"
-        if reason and _confirmed(store, len(departures)):
-            log.warning("suspicious result confirmed after %d crawls; accepting",
-                        CONFIRM_SUSPICIOUS + 1)
+        span = _confirmed(store, len(departures), now) if reason else None
+        if span is not None:
+            log.warning("suspicious result confirmed over %.1f h (%d crawls); accepting",
+                        span.total_seconds() / 3600, CONFIRM_SUSPICIOUS + 1)
             reason = None
         if reason:
             log.warning("crawl returned %d Departures but the previous snapshot had %d: %s",

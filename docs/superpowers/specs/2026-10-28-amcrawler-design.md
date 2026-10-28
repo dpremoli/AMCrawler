@@ -191,6 +191,12 @@ previously_matching(b) = matches(b, digest_filter, today)
   Participants or entering the date window *is* new.
 - Every daily run records a `digest_run` (even with zero entries, status
   `empty`) so the baseline advances daily.
+- **An empty snapshot never becomes the baseline (G2).** When the latest ok snapshot has
+  0 Departures (an accepted drop to empty), the run is recorded as `empty` with the
+  *current* baseline's `snapshot_id`, so the baseline does not advance; when the API
+  recovers the next Digest diffs against the pre-outage baseline and reports only the
+  genuinely new Departures. The first-ever run with 0 Departures still records `baseline`
+  with that snapshot (accepted: there is nothing older to protect).
 - **First ever run** (no previous digest_run): record status `baseline`, send
   nothing. Avoids a 59-Departure first email.
 - Ordering: by `start_date`, then name.
@@ -232,10 +238,14 @@ Digest ran now. Same set drives the map's accent colour.
   snapshot that had ≥ 10 (partial API results). A rejected snapshot keeps the fetched
   count in `departure_count`. **Recovery:** the guard compares with the last ok snapshot,
   which stops advancing, so a genuine drop would be rejected forever; when the previous
-  `CONFIRM_SUSPICIOUS = 2` crawls since the last ok snapshot were also rejected as
-  suspicious and their counts are within ±10 % of this one (all exactly 0 for an empty
-  result), the 3rd consecutive result is accepted (ok=1) and a WARNING
-  "suspicious result confirmed after 3 crawls; accepting" is logged.
+  suspicious rejections form a **streak** (the trailing run of rejected snapshots since the
+  last ok snapshot whose counts are all within ±10 % of this one; exactly 0 for an empty
+  result) of at least `CONFIRM_SUSPICIOUS = 2` and **the oldest of them is at least
+  `CONFIRM_SPAN = 24 h` old**, this result is accepted (ok=1) and a WARNING
+  "suspicious result confirmed over <h> h (3 crawls); accepting" is logged. (G1) The 24 h
+  span means a broken API serving 200-OK empty or partial data for a few hours, or extra
+  crawls from restarts/CLI, cannot be accepted; an inconsistent count in between restarts
+  the streak from that point.
 - The parser also drops full Departures (`pax >= paxMax`, `paxMax > 0`), even
   though the request already asks for `isFull=0`.
 - Catalogue failure is non-fatal if a previous catalogue exists (logged, reused).

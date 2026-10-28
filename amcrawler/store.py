@@ -177,16 +177,15 @@ class Store:
     def latest_ok_snapshot(self) -> SnapshotInfo | None:
         return self._newest_snapshot("WHERE ok = 1")
 
-    def recent_rejected_counts(self, errors: tuple[str, ...], limit: int) -> list[int]:
-        """Fetched counts of the newest snapshots rejected with one of `errors` since the
-        last OK snapshot, newest first."""
+    def rejected_since_last_ok(self, errors: tuple[str, ...]) -> list[SnapshotInfo]:
+        """Snapshots rejected with one of `errors` since the last OK snapshot, newest first."""
         marks = ",".join("?" * len(errors))
         with self._conn() as conn:
             rows = conn.execute(
-                f"SELECT departure_count FROM snapshots WHERE ok = 0 AND error IN ({marks}) "
+                f"SELECT * FROM snapshots WHERE ok = 0 AND error IN ({marks}) "
                 "AND id > COALESCE((SELECT MAX(id) FROM snapshots WHERE ok = 1), 0) "
-                "ORDER BY id DESC LIMIT ?", (*errors, limit)).fetchall()
-        return [r["departure_count"] for r in rows]
+                "ORDER BY id DESC", errors).fetchall()
+        return [_snapshot(r) for r in rows]
 
     def snapshot_departures(self, snapshot_id: int) -> list[Departure]:
         with self._conn() as conn:

@@ -271,6 +271,7 @@ def test_uncatalogued_departure_without_area_filter_is_not_reported_daily(store,
 # --- R2: the drop guard recovers from a genuine drop ----------------------------------
 
 def _crawl_n(store, n_found, when):
+    mock_bases()  # spans beyond a day also refresh the catalogue
     respx.get(TOURS).mock(return_value=httpx.Response(
         200, json=_tours_payload(*[_tour(f"n{k}", "i1") for k in range(n_found)])))
     return run_crawl(store, make_client(), when, pause=0)
@@ -283,26 +284,62 @@ def _seed_previous(store, n=40):
 
 
 @respx.mock
-def test_three_consistent_drops_are_accepted_on_the_third(store, caplog):
+def test_consistent_drops_spanning_24h_are_accepted(store, caplog):
     import logging
 
     _seed_previous(store)
     infos = []
     with caplog.at_level(logging.WARNING, logger="amcrawler"):
         for k, found in enumerate((10, 10, 11)):
-            infos.append(_crawl_n(store, found, CRAWL_NOW + timedelta(hours=3 * k)))
+            infos.append(_crawl_n(store, found, CRAWL_NOW + timedelta(hours=12 * k)))
     assert [i.ok for i in infos] == [False, False, True]
     assert infos[0].departure_count == 10 and infos[1].error == "suspicious drop"
     assert store.latest_ok_snapshot().departure_count == 11
-    assert "suspicious result confirmed after 3 crawls; accepting" in caplog.text
+    assert "confirmed over 24.0 h (3 crawls); accepting" in caplog.text
     # later crawls compare to the accepted snapshot
-    assert _crawl_n(store, 10, CRAWL_NOW + timedelta(hours=12)).ok
+    assert _crawl_n(store, 10, CRAWL_NOW + timedelta(hours=36)).ok
 
 
 @respx.mock
-def test_three_consistent_empty_results_are_accepted(store):
+def test_three_consistent_drops_within_9h_stay_rejected(store):
     _seed_previous(store)
-    oks = [_crawl_n(store, 0, CRAWL_NOW + timedelta(hours=3 * k)).ok for k in range(3)]
+    oks = [_crawl_n(store, 10, CRAWL_NOW + timedelta(hours=3 * k)).ok for k in range(4)]
+    assert oks == [False] * 4
+
+
+@respx.mock
+def test_rapid_consistent_crawls_within_1h_stay_rejected(store):
+    _seed_previous(store)
+    oks = [_crawl_n(store, 10, CRAWL_NOW + timedelta(minutes=6 * k)).ok for k in range(10)]
+    assert oks == [False] * 10
+
+
+@respx.mock
+def test_extra_crawls_never_shorten_the_span(store):
+    _seed_previous(store)
+    for when in (CRAWL_NOW, CRAWL_NOW + timedelta(hours=1), CRAWL_NOW + timedelta(hours=2)):
+        _crawl_n(store, 10, when)
+    assert not _crawl_n(store, 10, CRAWL_NOW + timedelta(hours=23)).ok
+    assert _crawl_n(store, 10, CRAWL_NOW + timedelta(hours=24)).ok
+
+
+@respx.mock
+def test_inconsistent_count_restarts_the_streak(store):
+    _seed_previous(store)
+    _crawl_n(store, 10, CRAWL_NOW)
+    _crawl_n(store, 10, CRAWL_NOW + timedelta(hours=12))
+    assert not _crawl_n(store, 15, CRAWL_NOW + timedelta(hours=20)).ok  # breaks the streak
+    # the streak is the trailing run of consistent rejections: it restarts at +25h
+    assert not _crawl_n(store, 10, CRAWL_NOW + timedelta(hours=25)).ok
+    assert not _crawl_n(store, 10, CRAWL_NOW + timedelta(hours=30)).ok
+    assert not _crawl_n(store, 10, CRAWL_NOW + timedelta(hours=48)).ok
+    assert _crawl_n(store, 10, CRAWL_NOW + timedelta(hours=49)).ok
+
+
+@respx.mock
+def test_consistent_empty_results_spanning_24h_are_accepted(store):
+    _seed_previous(store)
+    oks = [_crawl_n(store, 0, CRAWL_NOW + timedelta(hours=12 * k)).ok for k in range(3)]
     assert oks == [False, False, True]
 
 

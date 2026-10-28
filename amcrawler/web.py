@@ -34,12 +34,16 @@ def _href(pairs: list[tuple[str, str]], hidden_view: bool) -> str:
     return "/?" + urlencode(pairs) if pairs else "/"
 
 
-def _chips(f: Filter, hidden_view: bool) -> list[dict]:
+def _chips(f: Filter, hidden_view: bool, q: str = "") -> list[dict]:
     pairs = f.to_query()
-    return [
-        {"label": label, "href": _href(pairs[:i] + pairs[i + 1:], hidden_view)}
+    text = [("q", q)] if q else []
+    chips = [
+        {"label": label, "href": _href(pairs[:i] + pairs[i + 1:] + text, hidden_view)}
         for i, (_key, _value, label) in enumerate(filter_parts(f))
     ]
+    if q:
+        chips.append({"label": f"“{q}”", "href": _href(pairs, hidden_view)})
+    return chips
 
 
 def _int_or_zero(raw: str | None) -> int:
@@ -129,13 +133,16 @@ def create_app(
     def index(request: Request):
         today = digest.today_in(cfg.tz, now())
         search = Filter.from_query(request.query_params.multi_items())
+        q = request.query_params.get("q", "").strip()
         hidden_view = request.query_params.get("nascoste") == "1"
         hidden = store.hidden_ids()
         last_ok = store.latest_ok_snapshot()
         current = store.snapshot_departures(last_ok.id) if last_ok else []
         pool = [d for d in current if (d.id in hidden) == hidden_view]
-        results = sorted(filters.apply(pool, search, today),
-                         key=lambda d: (d.start_date, d.name, d.id))
+        results = sorted(
+            (d for d in filters.apply(pool, search, today)
+             if filters.text_matches(d, q, country_name_it)),
+            key=lambda d: (d.start_date, d.name, d.id))
         badged = digest.badged_ids(store, today, current)
         new_count = sum(1 for d in results if d.id in badged)
 
@@ -146,19 +153,22 @@ def create_app(
             "names": {c: country_name_it(c) for c in map_codes},
             "numeric": {c: iso_numeric(c) for c in map_codes},
         }
+        text_pair = [("q", q)] if q else []
         ctx = {
             "results": results,
             "badged": badged,
             "hidden_view": hidden_view,
             "search": search,
-            "chips": _chips(search, hidden_view),
+            "q": q,
+            "today": today,
+            "chips": _chips(search, hidden_view, q),
             "status": status_strip(last_ok, len(results), new_count),
             **_filter_options({a for d in current for a in d.areas},
                               {c for d in current for c in d.countries},
                               store.formulas(), search),
             "map_data": map_data,
-            "list_href": _href(search.to_query(), False),
-            "hidden_href": _href(search.to_query(), True),
+            "list_href": _href(search.to_query() + text_pair, False),
+            "hidden_href": _href(search.to_query() + text_pair, True),
             "search_query": urlencode(search.to_query()),
         }
         return templates.TemplateResponse(request, "index.html", ctx)

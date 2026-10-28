@@ -4,6 +4,8 @@
   --bad: #b3261e; --bad-bg: #fde8e6;
   --map-sea: #fff; --map-none: #e7ebef; --map-low: #8ea6bf; --map-high: #2c4a68;
   --map-stroke: #fff;
+  --surface-2: #eef1f4; --soon: #9a5b00; --soon-bg: #fff3d6;
+  --fill: #2f7d4f; --fill-bg: #dfe6ec; --one: #d9640f;
   color-scheme: light dark;
 }
 @media (prefers-color-scheme: dark) {
@@ -13,6 +15,8 @@
     --bad: #ff8a80; --bad-bg: #3a1c1a;
     --map-sea: #1a1f25; --map-none: #262d35; --map-low: #5d7f9f; --map-high: #bdd6ee;
     --map-stroke: #101317;
+    --surface-2: #222830; --soon: #f5c060; --soon-bg: #3a2e14;
+    --fill: #5cc489; --fill-bg: #2a3139; --one: #ff9a3d;
   }
 }
 * { box-sizing: border-box; }
@@ -56,22 +60,59 @@ h1, h2 { margin: 0; }
 .layout[data-view="list"] .map-pane { display: none; }
 .layout[data-view="map"] .list { display: none; }
 .card {
-  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
-  padding: 12px; margin-bottom: 10px;
+  display: grid; gap: 8px; background: var(--surface); border: 1px solid var(--line);
+  border-radius: 12px; padding: 12px; margin-bottom: 10px;
 }
 .card-head { display: flex; align-items: flex-start; gap: 8px; justify-content: space-between; }
-.card h2 { font-size: 1.05rem; }
+.card h2 { font-size: 1.05rem; min-width: 0; }
 .badge {
   flex: none; padding: 2px 8px; border-radius: 6px; background: var(--new);
   color: #fff; font-size: .75rem; font-weight: 700; letter-spacing: .04em;
 }
-.meta { margin: 4px 0 0; color: var(--muted); font-size: .92rem; }
+.where { margin: 0; color: var(--muted); font-size: .9rem; }
+.strip {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px;
+  background: var(--surface-2); border-radius: 10px; padding: 8px 12px;
+  font-variant-numeric: tabular-nums;
+}
+.strip .end { text-align: right; }
+.strip .dd { font-size: 1.3rem; font-weight: 700; line-height: 1.1; }
+.strip .ww { font-size: .7rem; font-weight: 700; letter-spacing: .08em; color: var(--muted); }
+.strip .line { position: relative; text-align: center; font-size: .78rem; color: var(--muted); }
+.strip .line::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 2px dashed var(--line);
+}
+.strip .line span { position: relative; background: var(--surface-2); padding: 0 6px; }
+.stats {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: .85rem;
+  font-variant-numeric: tabular-nums;
+}
+.soon {
+  font-size: .8rem; font-weight: 600; color: var(--soon); background: var(--soon-bg);
+  border-radius: 6px; padding: 1px 7px; white-space: nowrap;
+}
+.later { color: var(--muted); }
+.ticks { display: flex; gap: 2px; }
+.ticks i { flex: 1; height: 10px; border-radius: 2px; background: var(--fill-bg); }
+.ticks i:nth-child(5n):not(:last-child) { margin-right: 3px; }
+.ticks i.on { background: var(--fill); }
+.ticks.one i.on { background: var(--one); }
+.meter { height: 10px; border-radius: 3px; background: var(--fill-bg); overflow: hidden; }
+.meter > span { display: block; height: 100%; background: var(--fill); }
+.meter.one > span { background: var(--one); }
 .notes {
-  margin: 8px 0 0; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2;
-  -webkit-box-orient: vertical; overflow: hidden; cursor: pointer;
+  margin: 0; font-size: .88rem; color: var(--muted); display: -webkit-box;
+  -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  cursor: pointer;
 }
 .notes[aria-expanded="true"] { display: block; }
-.card-actions { display: flex; gap: 8px; margin-top: 10px; }
+.card-foot { display: flex; align-items: center; gap: 8px; }
+.card-foot .code { flex: 1; color: var(--muted); font-size: .8rem; font-variant-numeric: tabular-nums; }
+.search { display: flex; gap: 8px; padding: 8px 12px 0; }
+.search input[type="search"] {
+  flex: 1; min-width: 0; min-height: 44px; padding: 6px 12px; font: inherit; color: var(--text);
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+}
 .btn {
   display: inline-flex; align-items: center; justify-content: center;
   min-height: 44px; min-width: 44px; padding: 0 16px; border-radius: 10px;

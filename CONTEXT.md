@@ -56,7 +56,7 @@ The saved criteria (Area, Country, Formula, departure window in days from today,
 _Avoid_: notification settings, preferences, alert
 
 **Search**:
-The criteria currently applied while browsing; changing it never affects the Digest.
+The criteria, and optional free text, currently applied while browsing; changing it never affects the Digest. The text is never part of the Digest Filter.
 _Avoid_: filter (unqualified), query
 
 **New Entry**:

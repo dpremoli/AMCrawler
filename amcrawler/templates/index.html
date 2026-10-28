@@ -11,6 +11,13 @@
   <a class="icon-btn" href="/settings" aria-label="Impostazioni">&#9881;</a>
 </header>
 
+<form class="search" role="search" method="get" action="/">
+  {% for key, value in search.to_query() %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
+  {% if hidden_view %}<input type="hidden" name="nascoste" value="1">{% endif %}
+  <input type="search" name="q" value="{{ q }}" placeholder="Cerca viaggio, paese, codice…" aria-label="Cerca" enterkeyhint="search" autocomplete="off">
+  <button type="submit" class="btn primary">Cerca</button>
+</form>
+
 <p class="status{% if status.bad %} status-bad{% endif %}" role="status">{{ status.text }}</p>
 
 <nav class="tabs" aria-label="Elenco">
@@ -44,6 +51,7 @@
   <form method="get" action="/">
     <h2 id="filters-title">Ricerca</h2>
     {% if hidden_view %}<input type="hidden" name="nascoste" value="1">{% endif %}
+    {% if q %}<input type="hidden" name="q" value="{{ q }}">{% endif %}
     {% include "_filter_fields.html" %}
     <div class="sheet-actions">
       <button type="submit" class="btn primary">Cerca</button>

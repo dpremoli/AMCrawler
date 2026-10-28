@@ -1,3 +1,4 @@
+import pytest
 from datetime import timedelta
 
 from amcrawler.filters import apply, matches
@@ -39,3 +40,43 @@ def test_no_catalogue_fails_area_constraint():
 def test_apply_keeps_input_order():
     a, b, c = dep(id="a", formula="X"), dep(id="b"), dep(id="c")
     assert [d.id for d in apply([c, a, b], Filter(formulas=("Adventure",)), TODAY)] == ["c", "b"]
+
+
+# --- text search ----------------------------------------------------------------
+
+def _name(code):
+    return {"PE": "Perù", "TH": "Thailandia", "JP": "Giappone"}.get(code, code)
+
+
+@pytest.mark.parametrize("q, expected", [
+    ("", True), ("   ", True),
+    ("peru", True), ("PERÙ", True), ("PERU Discovery", True),
+    ("inca trail", True), ("incas", False),
+    ("2026-0187", True), ("0187", True), ("9650", True),
+    ("discovery", True), ("adventure", False),
+    ("sud america", True), ("sud asia", False),
+    ("thailandia", False),
+    ("peru 2026-0187 trail", True), ("peru giappone", False),
+])
+def test_text_matches(q, expected):
+    from amcrawler.filters import text_matches
+
+    d = dep(name="Inca Trail", code="2026-0187", itinerary_code="9650",
+            formula="Discovery", countries=("PE",), areas=("Sud America",))
+    assert text_matches(d, q, _name) is expected
+
+
+def test_text_matches_folds_accents_both_ways():
+    from amcrawler.filters import text_matches
+
+    d = dep(name="Città del Messico", countries=("PE",), areas=())
+    assert text_matches(d, "citta", _name) and text_matches(d, "CITTÀ messico", _name)
+    assert text_matches(d, "peru", _name) and text_matches(d, "perù", _name)
+
+
+def test_from_query_ignores_the_search_text():
+    from amcrawler.models import Filter
+
+    assert Filter.from_query([("q", "peru"), ("formula", "Discovery")]) == Filter(
+        formulas=("Discovery",))
+    assert Filter.from_query([("q", "peru")]).to_query() == []

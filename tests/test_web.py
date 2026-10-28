@@ -3,7 +3,7 @@ import re
 from datetime import timedelta
 
 from amcrawler.source import itinerary_url
-from tests.conftest import NOW, dep, itin
+from tests.conftest import NOW, TODAY, dep, itin
 
 
 def _map_data(html):
@@ -185,7 +185,7 @@ def test_one_day_departure_card_and_chip_use_singular(app_client, store):
     c = app_client(store=store)
     html = c.get("/?dmax=1").text
     card = html.split('data-id="x1"', 1)[1].split("</article>", 1)[0]
-    assert "1 giorno ·" in card and "1 giorni" not in card
+    assert ">1 giorno<" in card and "1 giorni" not in card
     assert "Durata massima 1 giorno" in html and "1 giorni" not in html
 
 
@@ -227,3 +227,155 @@ def test_build_app_configures_logging(monkeypatch):
     monkeypatch.setattr(web, "create_app", lambda cfg: ("app", cfg))
     assert web.build_app() == ("app", "cfg")
     assert calls and calls[0]["level"] == logging.INFO
+
+
+# --- search box ---------------------------------------------------------------------
+
+def test_search_matches_name_accents_and_case(client):
+    text = client.get("/?q=KENYA").text
+    assert "Kenya Safari" in text and "Thailandia Classica" not in text
+    text = client.get("/?q=thailandia+classica").text
+    assert "Thailandia Classica" in text and "Giappone Discovery" not in text
+
+
+def test_search_matches_country_area_formula_and_code(client):
+    assert "Giappone Discovery" in client.get("/?q=giappone").text
+    assert "Kenya Safari" in client.get("/?q=africa").text
+    assert "Thailandia Classica" not in client.get("/?q=africa").text
+    assert "Giappone Discovery" in client.get("/?q=discovery").text
+    assert "Giappone Discovery" not in client.get("/?q=adventure").text
+    assert "Kenya Safari" in client.get("/?q=2026-0003").text
+    assert "Kenya Safari" not in client.get("/?q=2026-0002").text
+
+
+def test_search_matches_the_italian_country_name(client):
+    text = client.get("/?q=Kenya").text
+    assert "Kenya Safari" in text
+    assert "Giappone Discovery" in client.get("/?q=giappone").text
+
+
+def test_search_terms_are_anded_and_combine_with_filters(client):
+    assert "Kenya Safari" in client.get("/?q=kenya+africa").text
+    assert "Kenya Safari" not in client.get("/?q=kenya+asia").text
+    text = client.get("/?q=safari&formula=Discovery").text
+    assert "Kenya Safari" not in text
+
+
+def test_search_applies_to_counts_map_and_status(client):
+    r = client.get("/?q=kenya")
+    assert "1 partenza · 1 nuova" in r.text
+    assert [d["name"] for d in _map_data(r.text)["departures"]] == ["Kenya Safari"]
+
+
+def test_search_applies_in_the_hidden_view(client, seeded_store):
+    seeded_store.hide("d1", "2026-0001", NOW)
+    text = client.get("/?nascoste=1&q=thailandia").text
+    assert "Thailandia Classica" in text
+    assert "Thailandia Classica" not in client.get("/?nascoste=1&q=kenya").text
+
+
+def test_search_form_keeps_filters_and_hidden_view(client):
+    html = client.get("/?q=kenya&formula=Adventure&nascoste=1").text
+    form = html.split('role="search"', 1)[1].split("</form>", 1)[0]
+    assert 'action="/"' in form and 'method="get"' in form
+    assert 'type="search"' in form and 'name="q"' in form and 'value="kenya"' in form
+    assert 'placeholder="Cerca viaggio, paese, codice…"' in form
+    assert 'aria-label="Cerca"' in form
+    assert 'name="formula" value="Adventure"' in form
+    assert 'name="nascoste" value="1"' in form
+    assert html.index('role="search"') < html.index('role="status"')
+
+
+def test_search_form_is_prefilled_and_escaped(client):
+    html = client.get('/?q="><b>').text
+    assert 'value="&#34;&gt;&lt;b&gt;"' in html
+    assert '"><b>' not in html
+
+
+def test_search_text_chip_is_removable_and_keeps_other_filters(client):
+    html = client.get("/?q=kenya&formula=Adventure").text
+    chips = html.split('id="chips"', 1)[1].split("</ul>", 1)[0]
+    assert "“kenya”" in chips
+    removing_q = re.search(r'<a class="chip" href="([^"]*)"[^>]*>Formula', chips).group(1)
+    assert "q=kenya" in removing_q and "formula" not in removing_q
+    removing_formula = re.search(r'href="([^"]*)"[^>]*>“kenya”', chips).group(1)
+    assert removing_formula == "/?formula=Adventure"
+
+
+def test_search_text_never_reaches_the_digest(client):
+    html = client.get("/?q=kenya&formula=Adventure").text
+    assert 'name="query" value="formula=Adventure"' in html
+    sheet = html.split('id="filters"', 1)[1]
+    assert 'name="q" value="kenya"' in sheet  # the sheet keeps the text for Cerca
+    assert "Azzera" in sheet
+
+
+def test_tabs_keep_the_search_text(client):
+    html = client.get("/?q=kenya").text
+    assert 'href="/?q=kenya&amp;nascoste=1"' in html
+
+
+# --- card --------------------------------------------------------------------------
+
+def _card(html, dep_id):
+    return html.split(f'data-id="{dep_id}"', 1)[1].split("</article>", 1)[0]
+
+
+def test_card_has_start_date_hook_and_date_strip(client):
+    html = client.get("/").text
+    card = _card(html, "d1")
+    # TODAY (28 Oct) + 30 days = 27 Nov, a Friday; 12 days
+    assert 'data-start="2026-11-27"' in html
+    assert ">VEN<" in card and ">27 nov<" in card
+    assert ">12 giorni<" in card and ">MAR<" in card and ">8 dic<" in card
+
+
+def test_card_where_line_and_stats(client):
+    card = _card(client.get("/").text, "d1")
+    assert "Thailandia · Adventure" in card
+    assert "8/15 iscritti" in card
+    assert "tra 30 giorni" in card and "Parte tra" not in card
+
+
+def test_card_countdown_soon_pill_has_text(client, seeded_store):
+    seeded_store.record_snapshot(NOW, [dep(id="d9", start_date=TODAY + timedelta(days=3))])
+    card = _card(client.get("/").text, "d9")
+    assert 'class="soon"' in card and "Parte tra 3 giorni" in card
+
+
+def test_card_seat_blocks_and_colours(client, seeded_store):
+    seeded_store.record_snapshot(NOW, [
+        dep(id="d8", participants=6, max_participants=15),
+        dep(id="d9", participants=1, max_participants=14)])
+    html = client.get("/").text
+    many = _card(html, "d8")
+    assert many.count('<i class="on">') == 6 and many.count("<i") == 15
+    assert 'role="img" aria-label="6 iscritti su 15 posti"' in many
+    assert "ticks one" not in many
+    one = _card(html, "d9")
+    assert 'class="ticks one"' in one and "1 iscritto" in one
+    assert 'aria-label="1 iscritto su 14 posti"' in one
+
+
+def test_card_without_known_capacity_shows_a_bar(client, seeded_store):
+    seeded_store.record_snapshot(NOW, [
+        dep(id="d8", participants=4, max_participants=0),
+        dep(id="d9", participants=4, max_participants=40)])
+    html = client.get("/").text
+    for dep_id in ("d8", "d9"):
+        card = _card(html, dep_id)
+        assert "<i" not in card and 'class="meter' in card
+
+
+def test_card_has_no_flags_and_keeps_action_hooks(client):
+    card = _card(client.get("/").text, "d1")
+    assert not re.search("[\U0001F1E6-\U0001F1FF]", card)
+    assert 'data-action="hide" data-id="d1"' in card
+    assert "2026-0001" in card and ">Vedi<" in card
+    assert 'role="button"' in card  # the notes
+
+
+def test_hidden_view_card_offers_restore(client, seeded_store):
+    seeded_store.hide("d1", "2026-0001", NOW)
+    card = _card(client.get("/?nascoste=1").text, "d1")
+    assert 'data-action="unhide" data-id="d1"' in card and "Ripristina" in card

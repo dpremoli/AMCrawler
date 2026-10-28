@@ -349,10 +349,21 @@ Tap targets ≥ 44 px. System font stack. Light and dark via
   last crawl failed, the last Digest failed, or the catalogue is older than 72 h
   ("catalogo non aggiornato").
 - **Active filter chips** under the bar, each removable.
-- **List:** cards sorted by start date. Card = name, `NUOVA` badge if New,
-  dates, duration, `8/15 iscritti`, Formula, Countries, notes (2 lines, tap to
-  expand), "Vedi viaggio" link (new tab), "Nascondi" button. Hide removes the card
-  with a 5 s "Annulla" snackbar.
+- **Search box** under the top bar (`q`, GET `/` and the Nascoste view): every
+  whitespace-separated term must occur, case- and accent-insensitively, in the
+  Itinerary name, Departure code, Itinerary code, Formula, Italian Country names or
+  Area names. It is part of Search only, never of the Digest Filter ("Usa per il
+  Digest" does not carry it), is applied before list, map, counts and status strip,
+  shows as a removable chip, and "Azzera" clears it.
+- **List:** cards sorted by start date. Card ("Striscia date", mockup in
+  `docs/design/card-variants.html`) = name, `NUOVA` badge if New, Countries and
+  Formula, a date strip (weekday + start date, duration, weekday + end date; the year
+  only when it is not the current one), `8/15 iscritti` with a countdown ("Parte
+  oggi", "Parte domani", "Parte tra N giorni" up to 21 days in an amber pill,
+  "tra N giorni" beyond, "In corso" once started), one block per seat (a continuous
+  bar when the seat count is unknown or above 30), notes (2 lines, tap to expand),
+  the Departure code, "Vedi" link (new tab) and "Nascondi" button. Hide removes the
+  card with a 5 s "Annulla" snackbar.
 - **Map:** d3 `geoNaturalEarth1`, countries shaded: accent colour if they contain
   ≥ 1 New Departure in the current results; otherwise a neutral sequential shade
   by count; uncoloured if 0. A Departure counts in every Country it visits.

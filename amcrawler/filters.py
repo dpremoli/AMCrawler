@@ -1,8 +1,9 @@
 """Digest Filter / Search matching on Departures."""
 from __future__ import annotations
 
+import unicodedata
 from datetime import date
-from typing import Iterable
+from typing import Callable, Iterable
 
 from amcrawler.models import Departure, Filter
 
@@ -33,3 +34,20 @@ def matches(d: Departure, f: Filter, today: date) -> bool:
 
 def apply(deps: Iterable[Departure], f: Filter, today: date) -> list[Departure]:
     return [d for d in deps if matches(d, f, today)]
+
+
+def fold(text: str) -> str:
+    """Casefold and strip accents, so "peru" finds "Perù"."""
+    decomposed = unicodedata.normalize("NFKD", text.casefold())
+    return "".join(c for c in decomposed if not unicodedata.combining(c))
+
+
+def text_matches(d: Departure, q: str, country_name: Callable[[str], str]) -> bool:
+    """Search text: every whitespace-separated term must occur in the Departure's name,
+    codes, Formula, Italian Country names or Area names. Not part of the Digest Filter."""
+    terms = fold(q).split()
+    if not terms:
+        return True
+    haystack = fold(" ".join([d.name, d.code, d.itinerary_code, d.formula,
+                              *(country_name(c) for c in d.countries), *d.areas]))
+    return all(t in haystack for t in terms)

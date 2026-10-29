@@ -64,8 +64,16 @@ An Uncovered Departure that matches today's Digest Filter now but did not match 
 _Avoid_: new trip, new departure, update
 
 **Hidden Departure**:
-A Departure the owner has ruled out; it is excluded from Search results and the map and can never be a New Entry.
+A Departure the owner has ruled out; it is excluded from Search results and the map and can never be a New Entry. Hiding a Departure removes its pin and its Alert; restoring it does not bring them back.
 _Avoid_: dismissed, archived, deleted
+
+**Pinned Departure**:
+A Departure the Owner keeps at the top of the list for quick reference. Italian: *fissata*.
+_Avoid_: favourite, bookmark, starred
+
+**Alert**:
+A Participant number the Owner sets on one Departure; when the Departure reaches it, or stops being Uncovered, the Owner gets one email and the Alert ends. Italian: *avviso*.
+_Avoid_: watch, notification, subscription, bell
 
 **Digest**:
 The email listing New Entries, sent on the Owner's chosen weekdays while enabled. On a day with no New Entries it is skipped, unless the Owner asked for a "nessuna novità" mail. After a pause or skipped days, the next Digest reports every New Entry since the previous Digest.

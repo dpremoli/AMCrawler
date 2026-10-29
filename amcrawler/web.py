@@ -1,4 +1,4 @@
-"""FastAPI app: main view, hide/unhide, health, auth wiring."""
+"""FastAPI app: main view, hide/unhide, pins, Alerts, health, auth wiring."""
 from __future__ import annotations
 
 import logging
@@ -19,7 +19,7 @@ from .config import Config, load_config, parse_hhmm
 from .geo import country_name_it, iso_numeric
 from .labels import filter_parts, plural_it
 from .mailer import MailerNotConfigured, SmtpMailer, render_current, render_digest
-from .models import Filter
+from .models import Departure, Filter
 from .store import SnapshotInfo, Store
 from .templating import env
 
@@ -44,6 +44,24 @@ def _chips(f: Filter, hidden_view: bool, q: str = "") -> list[dict]:
     if q:
         chips.append({"label": f"“{q}”", "href": _href(pairs, hidden_view)})
     return chips
+
+
+MAX_ALERT = 99  # an Alert never asks for more Participants than this
+
+
+def _alert_error(threshold: str | None, d: Departure) -> str | None:
+    """Why `threshold` is not a valid Alert number for `d`, in Italian; None when it is."""
+    if threshold is None or not (threshold.isascii() and threshold.isdigit()):
+        return "Numero di iscritti non valido."
+    n = int(threshold)
+    if n <= d.participants:
+        return ("Scegli un numero maggiore di "
+                f"{plural_it(d.participants, 'iscritto', 'iscritti')}.")
+    if d.max_participants > 0 and n > d.max_participants:
+        return f"Il viaggio ha solo {d.max_participants} posti."
+    if n > MAX_ALERT:
+        return f"Massimo {MAX_ALERT} iscritti."
+    return None
 
 
 def _int_or_zero(raw: str | None) -> int:
@@ -143,6 +161,8 @@ def create_app(
             (d for d in filters.apply(pool, search, today)
              if filters.text_matches(d, q, country_name_it)),
             key=lambda d: (d.start_date, d.name, d.id))
+        pinned = set() if hidden_view else store.pinned_ids()
+        alerts = {} if hidden_view else store.alert_thresholds()
         badged = digest.badged_ids(store, today, current)
         new_count = sum(1 for d in results if d.id in badged)
 
@@ -156,6 +176,9 @@ def create_app(
         text_pair = [("q", q)] if q else []
         ctx = {
             "results": results,
+            "pinned_results": [d for d in results if d.id in pinned],
+            "pinned": pinned,
+            "alerts": alerts,
             "badged": badged,
             "hidden_view": hidden_view,
             "search": search,
@@ -173,18 +196,61 @@ def create_app(
         }
         return templates.TemplateResponse(request, "index.html", ctx)
 
+    def find(departure_id: str, visible_only: bool = False) -> Departure | None:
+        """A Departure of the latest OK snapshot; with `visible_only` not a Hidden one."""
+        match = next((d for d in store.latest_ok_departures() if d.id == departure_id), None)
+        if visible_only and match is not None and match.id in store.hidden_ids():
+            return None
+        return match
+
+    not_found = JSONResponse({"ok": False, "error": "partenza non trovata"}, status_code=404)
+
     @app.post("/hide/{departure_id}")
     def hide(departure_id: str):
-        match = next((d for d in store.latest_ok_departures() if d.id == departure_id), None)
+        match = find(departure_id)
         if match is None:
-            return JSONResponse({"ok": False, "error": "partenza non trovata"},
-                                status_code=404)
-        store.hide(match.id, match.code, now())
+            return not_found
+        store.hide(match.id, match.code, now())  # also drops its pin and Alert
         return {"ok": True}
 
     @app.post("/unhide/{departure_id}")
     def unhide(departure_id: str):
         store.unhide(departure_id)
+        return {"ok": True}
+
+    @app.post("/pin/{departure_id}")
+    def pin(departure_id: str):
+        match = find(departure_id, visible_only=True)
+        if match is None:
+            return not_found
+        store.pin(match.id, match.start_date, now())
+        return {"ok": True}
+
+    @app.post("/unpin/{departure_id}")
+    def unpin(departure_id: str):
+        if find(departure_id) is None:
+            return not_found
+        store.unpin(departure_id)
+        return {"ok": True}
+
+    @app.post("/alert/{departure_id}")
+    async def set_alert(departure_id: str, request: Request):
+        match = find(departure_id, visible_only=True)
+        if match is None:
+            return not_found
+        form = await request.form()
+        threshold = form.get("threshold")
+        error = _alert_error(threshold if isinstance(threshold, str) else None, match)
+        if error is not None:
+            return JSONResponse({"ok": False, "error": error}, status_code=400)
+        store.set_alert(match, int(threshold), now())
+        return {"ok": True}
+
+    @app.post("/alert/{departure_id}/delete")
+    def delete_alert(departure_id: str):
+        if find(departure_id) is None:
+            return not_found
+        store.delete_alert(departure_id)
         return {"ok": True}
 
     @app.get("/manifest.webmanifest")

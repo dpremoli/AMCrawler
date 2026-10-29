@@ -74,8 +74,18 @@
     return firstDayIn(month, dates);
   }
 
+  // Departures per start date from {start, copy} items; a card inside Fissati is a copy of
+  // one in the main list and must not count twice.
+  function countDates(items) {
+    var counts = {};
+    items.forEach(function (it) {
+      if (!it.copy) { counts[it.start] = (counts[it.start] || 0) + 1; }
+    });
+    return counts;
+  }
+
   var api = {
-    keepSelection: keepSelection, openingMonth: openingMonth, monthRange: monthRange, firstDayIn: firstDayIn,
+    countDates: countDates, keepSelection: keepSelection, openingMonth: openingMonth, monthRange: monthRange, firstDayIn: firstDayIn,
     monthWeeks: monthWeeks, shiftMonth: shiftMonth, monthTitle: monthTitle,
     dayLabel: dayLabel, selectionLine: selectionLine
   };
@@ -104,16 +114,15 @@
   var month = null;
   var selected = null;
 
-  function cards() {
+  function allCards() {
     return Array.prototype.slice.call(list.querySelectorAll(".card[data-start]"));
   }
+  function isCopy(c) { return c.closest(".pins") !== null; }
+  function cards() { return allCards().filter(function (c) { return !isCopy(c); }); }
   function countByDate() {
-    var counts = {};
-    cards().forEach(function (c) {
-      var d = c.getAttribute("data-start");
-      counts[d] = (counts[d] || 0) + 1;
-    });
-    return counts;
+    return countDates(allCards().map(function (c) {
+      return { start: c.getAttribute("data-start"), copy: isCopy(c) };
+    }));
   }
 
   // On "cal" the list shows only the selected day's cards; elsewhere all of them.

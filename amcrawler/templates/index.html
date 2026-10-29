@@ -2,6 +2,13 @@
 {% block title %}AMCrawler{% if hidden_view %} · Nascoste{% endif %}{% endblock %}
 {% block body %}
 {% set empty_text = "Nessuna partenza nascosta." if hidden_view else "Nessuna partenza corrisponde alla ricerca." %}
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M9 3h6l-1 6 4 4v2h-5v6l-1 1-1-1v-6H6v-2l4-4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+  <symbol id="i-pin-on" viewBox="0 0 24 24"><path d="M9 3h6l-1 6 4 4v2h-5v6l-1 1-1-1v-6H6v-2l4-4z" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 20a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+  <symbol id="i-bell-on" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M10 20a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</svg>
 <header class="topbar">
   <h1>AMCrawler</h1>
   <div class="seg" role="group" aria-label="Vista">
@@ -50,6 +57,20 @@
     <p id="cal-empty" class="empty" hidden>{{ empty_text }}</p>
   </section>
   <section class="list" aria-label="Partenze" id="lista">
+    {% if pinned_results %}
+    <details class="pins" open>
+      <summary><svg class="chev" width="16" height="16" aria-hidden="true"><use href="#i-chev"/></svg>Fissati <span class="count">({{ pinned_results | length }})</span></summary>
+      {% for d in pinned_results %}
+      <div class="prow">
+        <button type="button" class="prow-btn" aria-expanded="false"><span class="nm">{{ d.name }}<span class="dt">{{ arrow_range(d.start_date, d.end_date) }}</span></span><span class="px">{{ d.participants }}{% if d.max_participants > 0 %}/{{ d.max_participants }}{% endif %}</span><span class="bell-mini">{% if d.id in alerts %}<svg aria-hidden="true"><use href="#i-bell-on"/></svg>{{ alerts[d.id] }}{% endif %}</span></button>
+        <div class="open-card" hidden>
+          {% include "_card.html" %}
+        </div>
+      </div>
+      {% endfor %}
+    </details>
+    <p class="divider">Tutte le partenze</p>
+    {% endif %}
     {% for d in results %}
     {% include "_card.html" %}
     {% else %}
@@ -79,6 +100,25 @@
     <button type="submit" class="btn">Usa per il Digest</button>
   </form>
 </dialog>
+
+{% if not hidden_view %}
+<dialog id="bell" class="sheet" aria-labelledby="bell-title">
+  <h2 id="bell-title"></h2>
+  <p class="now" id="bell-now"></p>
+  <div class="stepper">
+    <button type="button" id="bell-minus" aria-label="Uno in meno">&minus;</button>
+    <output id="bell-goal" aria-live="polite"><span id="bell-num"></span><small>iscritti</small></output>
+    <button type="button" id="bell-plus" aria-label="Uno in più">+</button>
+  </div>
+  <p class="hint">Ti mando un'email quando raggiunge questo numero, poi l'avviso si spegne. Ti scrivo anche se il viaggio esce dall'elenco.</p>
+  <p class="form-error" id="bell-error" role="alert" hidden></p>
+  <div class="acts">
+    <button type="button" class="btn primary" id="bell-save">Attiva avviso</button>
+    <button type="button" class="btn" id="bell-remove" hidden>Rimuovi avviso</button>
+    <button type="button" class="btn quiet" id="bell-cancel">Annulla</button>
+  </div>
+</dialog>
+{% endif %}
 
 <div id="snackbar" class="snackbar" role="status" aria-live="polite" hidden>
   <span id="snackbar-text"></span>

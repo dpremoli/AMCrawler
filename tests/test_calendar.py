@@ -102,3 +102,25 @@ def test_selection_stays_on_a_day_that_lost_its_last_departure():
 def test_list_empty_message_is_hidden_in_calendar_view():
     css = (STATIC / "app.css").read_text(encoding="utf-8")
     assert '.layout[data-view="cal"] .list .empty { display: none; }' in css
+
+
+@pytest.mark.skipif(node is None, reason="node is not installed")
+def test_a_pinned_departure_counts_once_in_the_calendar():
+    items = json.dumps([
+        {"start": "2026-11-13", "copy": False},
+        {"start": "2026-11-13", "copy": True},   # its row in Fissati
+        {"start": "2026-11-20", "copy": False},
+    ])
+    assert _js("c.countDates(" + items + ")") == {"2026-11-13": 1, "2026-11-20": 1}
+
+
+def test_pinned_cards_show_once_per_view():
+    css = (STATIC / "app.css").read_text(encoding="utf-8")
+    # list view: the Fissati row stands in for the card; calendar view: the card, no Fissati
+    assert '.layout:not([data-view="cal"]) .list > .card.pinned { display: none; }' in css
+    assert '.layout[data-view="cal"] .pins, .layout[data-view="cal"] .divider' in css
+
+
+def test_calendar_ignores_cards_inside_fissati():
+    js = (STATIC / "calendar.js").read_text(encoding="utf-8")
+    assert 'c.closest(".pins") !== null' in js

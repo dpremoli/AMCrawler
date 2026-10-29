@@ -1,9 +1,16 @@
 {% set blocks = seat_blocks(d.participants, d.max_participants) %}
 {% set when, soon = countdown(d.start_date, today) %}
-<article class="card" data-id="{{ d.id }}" data-start="{{ d.start_date.isoformat() }}">
+{% set threshold = alerts.get(d.id, 0) %}
+{% set is_pinned = d.id in pinned %}
+{% set goal = threshold - 1 if blocks is not none and 0 < threshold <= blocks | length else -1 %}
+<article class="card{% if is_pinned %} pinned{% endif %}" data-id="{{ d.id }}" data-start="{{ d.start_date.isoformat() }}"{% if is_pinned or threshold %} data-flagged="1"{% endif %}>
   <header class="card-head">
     <h2>{{ d.name }}</h2>
     {% if d.id in badged %}<span class="badge">NUOVA</span>{% endif %}
+    {% if not hidden_view %}
+    <button type="button" class="ibtn" data-action="{{ 'unpin' if is_pinned else 'pin' }}" data-id="{{ d.id }}" aria-pressed="{{ 'true' if is_pinned else 'false' }}" aria-label="{{ 'Togli da Fissati' if is_pinned else 'Aggiungi a Fissati' }}"><svg aria-hidden="true"><use href="#{{ 'i-pin-on' if is_pinned else 'i-pin' }}"/></svg></button>
+    <button type="button" class="ibtn" data-action="bell" data-id="{{ d.id }}" data-name="{{ d.name }}" data-participants="{{ d.participants }}" data-max="{{ d.max_participants }}" data-threshold="{{ threshold }}" aria-haspopup="dialog" aria-pressed="{{ 'true' if threshold else 'false' }}" aria-label="{{ 'Avviso a %d iscritti' % threshold if threshold else 'Imposta avviso' }}"><svg aria-hidden="true"><use href="#{{ 'i-bell-on' if threshold else 'i-bell' }}"/></svg>{% if threshold %}<span class="n">{{ threshold }}</span>{% endif %}</button>
+    {% endif %}
   </header>
   <p class="where">{% if d.countries %}{{ d.countries | map("country_name_it") | join(", ") }} · {% endif %}{{ d.formula }}</p>
   <div class="strip">
@@ -16,12 +23,15 @@
     <span class="{{ 'soon' if soon else 'later' }}">{{ when }}</span>
   </div>
   {% if blocks is not none %}
-  <div class="ticks{% if d.participants == 1 %} one{% endif %}" role="img" aria-label="{{ seats_label(d.participants, d.max_participants) }}">{% for on in blocks %}<i{% if on %} class="on"{% endif %}></i>{% endfor %}</div>
+  <div class="ticks{% if d.participants == 1 %} one{% endif %}" role="img" aria-label="{{ seats_label(d.participants, d.max_participants) }}{% if goal >= 0 %}; avviso a {{ threshold }}{% endif %}">{% for on in blocks %}<i{% if on or loop.index0 == goal %} class="{{ 'on' if on }}{{ ' ' if on and loop.index0 == goal }}{{ 'goal' if loop.index0 == goal }}"{% endif %}></i>{% endfor %}</div>
   {% else %}
   <div class="meter{% if d.participants == 1 %} one{% endif %}" role="img" aria-label="{{ seats_label(d.participants, d.max_participants) }}"><span style="width: {{ seat_percent(d.participants, d.max_participants) }}%"></span></div>
   {% endif %}
   {% if d.notes %}
   <p class="notes" tabindex="0" role="button" aria-expanded="false" title="Tocca per espandere">{{ d.notes }}</p>
+  {% endif %}
+  {% if threshold %}
+  <p class="watching"><svg aria-hidden="true"><use href="#i-bell-on"/></svg>Ti scrivo quando arriva a {{ threshold }} iscritti.</p>
   {% endif %}
   <footer class="card-foot">
     <span class="code">{{ d.code }}</span>

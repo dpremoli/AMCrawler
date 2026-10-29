@@ -93,8 +93,8 @@ h1, h2 { margin: 0; }
   display: grid; gap: 8px; background: var(--surface); border: 1px solid var(--line);
   border-radius: 12px; padding: 12px; margin-bottom: 10px;
 }
-.card-head { display: flex; align-items: flex-start; gap: 8px; justify-content: space-between; }
-.card h2 { font-size: 1.05rem; min-width: 0; }
+.card-head { display: flex; align-items: flex-start; gap: 6px; justify-content: space-between; }
+.card h2 { font-size: 1.05rem; min-width: 0; flex: 1; align-self: center; }
 .badge {
   flex: none; padding: 2px 8px; border-radius: 6px; background: var(--new);
   color: #fff; font-size: .75rem; font-weight: 700; letter-spacing: .04em;
@@ -127,6 +127,7 @@ h1, h2 { margin: 0; }
 .ticks i:nth-child(5n):not(:last-child) { margin-right: 3px; }
 .ticks i.on { background: var(--fill); }
 .ticks.one i.on { background: var(--one); }
+.ticks i.goal { box-shadow: inset 0 0 0 2px var(--one); }
 .meter { height: 10px; border-radius: 3px; background: var(--fill-bg); overflow: hidden; }
 .meter > span { display: block; height: 100%; background: var(--fill); }
 .meter.one > span { background: var(--one); }
@@ -136,6 +137,52 @@ h1, h2 { margin: 0; }
   cursor: pointer;
 }
 .notes[aria-expanded="true"] { display: block; }
+.ibtn {
+  position: relative; flex: none; display: inline-grid; place-items: center; width: 44px; height: 44px;
+  padding: 0; border: 1px solid var(--line); border-radius: 10px; background: var(--surface);
+  color: var(--muted); font: inherit; cursor: pointer;
+}
+.ibtn svg { width: 20px; height: 20px; }
+.ibtn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.ibtn .n {
+  position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0 5px;
+  display: grid; place-items: center; border-radius: 10px; background: var(--one);
+  color: var(--accent-text); font-size: .72rem; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.watching { margin: 0; display: flex; align-items: center; gap: 6px; font-size: .82rem; }
+.watching svg { flex: none; width: 16px; height: 16px; color: var(--one); }
+.pins { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin-bottom: 10px; }
+.pins > summary {
+  list-style: none; min-height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 12px;
+  font-weight: 650; cursor: pointer;
+}
+.pins > summary::-webkit-details-marker { display: none; }
+.pins .chev { transition: transform .15s; color: var(--muted); }
+.pins[open] .chev { transform: rotate(90deg); }
+.pins .count { color: var(--muted); font-weight: 400; }
+.prow { border-top: 1px solid var(--line); }
+.prow-btn {
+  width: 100%; min-height: 48px; display: grid; grid-template-columns: 1fr auto auto; gap: 10px;
+  align-items: center; padding: 6px 12px; background: none; border: 0; color: var(--text);
+  font: inherit; text-align: left; cursor: pointer; font-variant-numeric: tabular-nums;
+}
+.prow .nm { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prow .dt { display: block; font-size: .82rem; font-weight: 400; color: var(--muted); }
+.prow .px { font-size: .88rem; }
+.prow .bell-mini {
+  display: inline-flex; align-items: center; justify-content: flex-end; gap: 2px; min-width: 34px;
+  font-size: .78rem; font-weight: 700; color: var(--one);
+}
+.prow .bell-mini svg { width: 14px; height: 14px; }
+.prow .open-card { padding: 0 8px 8px; }
+.prow .open-card .card { margin-bottom: 0; border-color: var(--accent); }
+.divider {
+  margin: 4px 2px 8px; font-size: .75rem; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--muted);
+}
+/* a pinned card is listed in Fissati and, for the calendar, once more in the main list */
+.layout:not([data-view="cal"]) .list > .card.pinned { display: none; }
+.layout[data-view="cal"] .pins, .layout[data-view="cal"] .divider { display: none; }
 .card-foot { display: flex; align-items: center; gap: 8px; }
 .card-foot .code { flex: 1; color: var(--muted); font-size: .8rem; font-variant-numeric: tabular-nums; }
 .search { display: flex; gap: 8px; padding: 8px 12px 0; }
@@ -177,6 +224,19 @@ h1, h2 { margin: 0; }
 }
 .row { display: flex; gap: 8px; }
 .row .field { flex: 1; }
+.stepper { display: grid; grid-template-columns: 56px 1fr 56px; gap: 8px; align-items: center; margin: 12px 0; }
+.stepper button {
+  height: 56px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2);
+  color: var(--text); font: inherit; font-size: 1.5rem; cursor: pointer;
+}
+.stepper button:disabled { opacity: .4; cursor: default; }
+.stepper output { text-align: center; font-size: 2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stepper output small { display: block; font-size: .8rem; font-weight: 400; color: var(--muted); }
+.sheet .now { margin: 4px 0 0; color: var(--muted); font-size: .9rem; }
+.sheet .acts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.sheet .acts .primary { grid-column: 1 / -1; }
+.btn.quiet { border-color: transparent; background: transparent; color: var(--muted); }
+.form-error { margin: 8px 0 0; color: var(--bad); font-weight: 600; }
 .sheet-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .snackbar {
   position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 20;

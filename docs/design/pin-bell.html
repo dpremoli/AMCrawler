@@ -1,0 +1,272 @@
+<title>AMCrawler pin and bell</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: three phone-width panels (list with Fissati, bell dialog, alert email); tokens from amcrawler/static/app.css */
+:root {
+  --bg: #f5f6f8; --surface: #fff; --surface-2: #eef1f4; --text: #1b1f24; --muted: #5b6570; --line: #d8dde3;
+  --accent: #0b5cad; --accent-text: #fff; --new: #c2410c; --soon: #9a5b00; --soon-bg: #fff3d6;
+  --fill: #2f7d4f; --fill-bg: #dfe6ec; --one: #d9640f; --scrim: rgba(0,0,0,.45);
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #101317; --surface: #1a1f25; --surface-2: #222830; --text: #e8ebef; --muted: #9aa5b1; --line: #2d343c;
+  --accent: #5aa2f0; --accent-text: #0b1118; --new: #fb923c; --soon: #f5c060; --soon-bg: #3a2e14;
+  --fill: #5cc489; --fill-bg: #2a3139; --one: #ff9a3d; --scrim: rgba(0,0,0,.6); color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #101317; --surface: #1a1f25; --surface-2: #222830; --text: #e8ebef; --muted: #9aa5b1; --line: #2d343c;
+  --accent: #5aa2f0; --accent-text: #0b1118; --new: #fb923c; --soon: #f5c060; --soon-bg: #3a2e14;
+  --fill: #5cc489; --fill-bg: #2a3139; --one: #ff9a3d; --scrim: rgba(0,0,0,.6); color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.45 var(--font);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px 48px; }
+header.intro { max-width: 70ch; margin: 0 auto 24px; }
+header.intro h1 { font-size: 1.5rem; margin: 0 0 6px; text-wrap: balance; }
+header.intro p { margin: 0 0 6px; color: var(--muted); }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 28px; max-width: 1150px; margin: 0 auto; }
+.col { min-width: 0; display: grid; gap: 10px; align-content: start; }
+.col > h2 { font-size: 1.05rem; margin: 0; }
+.col > .why { margin: 0; color: var(--muted); font-size: .9rem; }
+.phone { position: relative; background: var(--bg); border: 1px solid var(--line); border-radius: 22px; padding: 12px; display: grid; gap: 10px; overflow: hidden; min-height: 560px; align-content: start; }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 14px;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--text); font: inherit; font-size: .95rem; cursor: pointer; text-decoration: none; }
+.btn.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.btn.quiet { border-color: transparent; background: transparent; color: var(--muted); }
+button:focus-visible, summary:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.ibtn { width: 44px; height: 44px; flex: none; display: inline-grid; place-items: center; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--surface); color: var(--muted); cursor: pointer; position: relative; padding: 0; }
+.ibtn svg { width: 20px; height: 20px; }
+.ibtn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.ibtn .n { position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px;
+  background: var(--one); color: #fff; font-size: .72rem; font-weight: 700; display: grid; place-items: center; font-variant-numeric: tabular-nums; }
+.badge { font-size: .7rem; font-weight: 700; letter-spacing: .06em; color: var(--new); border: 1px solid var(--new); border-radius: 6px; padding: 1px 6px; }
+
+/* card B3 */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: grid; gap: 8px; }
+.card .head { display: flex; align-items: flex-start; gap: 6px; }
+.card h3 { margin: 0; font-size: 1.05rem; flex: 1; min-width: 0; align-self: center; }
+.where { font-size: .88rem; color: var(--muted); }
+.strip { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; background: var(--surface-2); border-radius: 10px; padding: 8px 12px; font-variant-numeric: tabular-nums; }
+.strip .end { text-align: right; }
+.strip .dd { font-size: 1.25rem; font-weight: 700; line-height: 1.1; }
+.strip .ww { font-size: .7rem; font-weight: 700; letter-spacing: .08em; color: var(--muted); }
+.strip .line { position: relative; text-align: center; font-size: .78rem; color: var(--muted); }
+.strip .line::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 2px dashed var(--line); }
+.strip .line span { position: relative; background: var(--surface-2); padding: 0 6px; }
+.stats { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: .88rem; align-items: center; }
+.soon { font-size: .8rem; font-weight: 600; color: var(--soon); background: var(--soon-bg); border-radius: 6px; padding: 1px 7px; }
+.ticks { display: flex; gap: 2px; }
+.ticks i { flex: 1; height: 10px; border-radius: 2px; background: var(--fill-bg); }
+.ticks i:nth-child(5n):not(:last-child) { margin-right: 3px; }
+.ticks i.on { background: var(--fill); }
+.ticks i.goal { box-shadow: inset 0 0 0 2px var(--one); }
+.ticks.one i.on { background: var(--one); }
+.foot { display: flex; align-items: center; gap: 8px; }
+.foot .code { flex: 1; font-size: .8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.watching { font-size: .82rem; color: var(--text); display: flex; align-items: center; gap: 6px; }
+.watching svg { width: 16px; height: 16px; color: var(--one); }
+
+/* Fissati block */
+.pins { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.pins > summary { list-style: none; min-height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 12px; font-weight: 650; cursor: pointer; }
+.pins > summary::-webkit-details-marker { display: none; }
+.pins > summary .chev { transition: transform .15s; color: var(--muted); }
+.pins[open] > summary .chev { transform: rotate(90deg); }
+.pins > summary .count { color: var(--muted); font-weight: 400; }
+.prow { border-top: 1px solid var(--line); }
+.prow > button.row { width: 100%; min-height: 48px; display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center;
+  padding: 6px 12px; background: none; border: 0; color: var(--text); font: inherit; text-align: left; cursor: pointer; font-variant-numeric: tabular-nums; }
+.prow .nm { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prow .dt { font-size: .82rem; color: var(--muted); display: block; font-weight: 400; }
+.prow .px { font-size: .88rem; }
+.prow .bell-mini { display: inline-flex; align-items: center; gap: 2px; font-size: .78rem; font-weight: 700; color: var(--one); min-width: 34px; justify-content: end; }
+.prow .bell-mini svg { width: 14px; height: 14px; }
+.prow .open-card { padding: 0 8px 8px; }
+.prow .open-card .card { border-color: var(--accent); }
+.divider { font-size: .75rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 4px 2px -2px; }
+
+/* bell sheet */
+.scrim { position: absolute; inset: 0; background: var(--scrim); display: grid; align-items: end; }
+.scrim[hidden] { display: none; }
+.sheet { background: var(--surface); border-radius: 18px 18px 0 0; padding: 16px; display: grid; gap: 12px; }
+.sheet h3 { margin: 0; font-size: 1.1rem; }
+.sheet .now { margin: 0; color: var(--muted); font-size: .9rem; }
+.stepper { display: grid; grid-template-columns: 56px 1fr 56px; gap: 8px; align-items: center; }
+.stepper button { height: 56px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font-size: 1.5rem; cursor: pointer; }
+.stepper button:disabled { opacity: .4; cursor: default; }
+.stepper output { text-align: center; font-size: 2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stepper output small { display: block; font-size: .8rem; font-weight: 400; color: var(--muted); }
+.sheet .hint { margin: 0; font-size: .85rem; color: var(--muted); }
+.sheet .acts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sheet .acts .primary { grid-column: 1 / -1; }
+
+/* email */
+.mail { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.mail .mh { padding: 10px 12px; border-bottom: 1px solid var(--line); font-size: .82rem; color: var(--muted); display: grid; gap: 2px; }
+.mail .mh b { color: var(--text); font-weight: 650; font-size: .95rem; }
+.mail .mb { padding: 12px; display: grid; gap: 8px; font-size: .92rem; }
+.mail .mb p { margin: 0; }
+.mail .big { font-size: 1.15rem; font-weight: 700; }
+.mail a { color: var(--accent); }
+.legend { max-width: 1150px; margin: 28px auto 0; color: var(--muted); font-size: .9rem; }
+.legend ul { margin: 6px 0 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.legend h2 { color: var(--text); font-size: 1rem; margin: 0; }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M9 3h6l-1 6 4 4v2h-5v6l-1 1-1-1v-6H6v-2l4-4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+  <symbol id="i-pin-on" viewBox="0 0 24 24"><path d="M9 3h6l-1 6 4 4v2h-5v6l-1 1-1-1v-6H6v-2l4-4z" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 20a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+  <symbol id="i-bell-on" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M10 20a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</svg>
+
+<header class="intro">
+  <h1>Pin and bell: how they'd look</h1>
+  <p>Clickable mockup with sample trips. Tap the pin and bell icons, the rows in "Fissati", and the − / + buttons in the alert sheet.</p>
+</header>
+
+<main class="cols">
+
+  <!-- 1: list -->
+  <section class="col" aria-labelledby="t1">
+    <h2 id="t1">1 · Lista with "Fissati" on top</h2>
+    <p class="why">Pinned trips collapse to one line each. Tap a row to open its full card in place. The orange 🔔 number is the alert you set.</p>
+    <div class="phone">
+      <details class="pins" open>
+        <summary><svg class="chev" width="16" height="16"><use href="#i-chev"/></svg>Fissati <span class="count">(3)</span></summary>
+        <div class="prow">
+          <button class="row" type="button" aria-expanded="false"><span class="nm">Perù Discovery<span class="dt">ven 13 nov → dom 29 nov</span></span><span class="px">6/15</span><span class="bell-mini"></span></button>
+        </div>
+        <div class="prow" id="row-gio">
+          <button class="row" type="button" aria-expanded="true"><span class="nm">Giordania e Wadi Rum<span class="dt">sab 5 dic → dom 13 dic</span></span><span class="px">1/12</span><span class="bell-mini"><svg><use href="#i-bell-on"/></svg>4</span></button>
+          <div class="open-card">
+            <article class="card">
+              <div class="head"><h3>Giordania e Wadi Rum</h3>
+                <button class="ibtn" type="button" aria-pressed="true" aria-label="Togli da Fissati"><svg><use href="#i-pin-on"/></svg></button>
+                <button class="ibtn js-bell" type="button" aria-pressed="true" aria-label="Avviso a 4 iscritti"><svg><use href="#i-bell-on"/></svg><span class="n">4</span></button>
+              </div>
+              <div class="where">Giordania · Adventure</div>
+              <div class="strip"><div><div class="ww">SAB</div><div class="dd">5 dic</div></div><div class="line"><span>9 giorni</span></div><div class="end"><div class="ww">DOM</div><div class="dd">13 dic</div></div></div>
+              <div class="stats"><span><b>1/12</b> iscritto</span><span style="color:var(--muted)">tra 37 giorni</span></div>
+              <div class="ticks one" role="img" aria-label="1 iscritto su 12 posti; avviso a 4"><i class="on"></i><i></i><i></i><i class="goal"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+              <div class="watching"><svg><use href="#i-bell-on"/></svg>Ti scrivo quando arriva a 4 iscritti.</div>
+              <div class="foot"><span class="code">2026-0212</span><a class="btn primary" href="#">Vedi</a><button class="btn" type="button">Nascondi</button></div>
+            </article>
+          </div>
+        </div>
+        <div class="prow">
+          <button class="row" type="button" aria-expanded="false"><span class="nm">Patagonia Trek<span class="dt">dom 3 gen → gio 21 gen</span></span><span class="px">11/14</span><span class="bell-mini"><svg><use href="#i-bell-on"/></svg>13</span></button>
+        </div>
+      </details>
+
+      <p class="divider">Tutte le partenze</p>
+      <article class="card">
+        <div class="head"><h3>Royal Nepal Raid</h3>
+          <button class="ibtn js-pin" type="button" aria-pressed="false" aria-label="Aggiungi a Fissati"><svg><use href="#i-pin"/></svg></button>
+          <button class="ibtn js-bell" type="button" aria-pressed="false" aria-label="Imposta avviso"><svg><use href="#i-bell"/></svg></button>
+        </div>
+        <div class="where">Nepal · Motoraid</div>
+        <div class="strip"><div><div class="ww">VEN</div><div class="dd">13 nov</div></div><div class="line"><span>16 giorni</span></div><div class="end"><div class="ww">SAB</div><div class="dd">28 nov</div></div></div>
+        <div class="stats"><span><b>3/15</b> iscritti</span><span class="soon">Parte tra 15 giorni</span></div>
+        <div class="ticks" role="img" aria-label="3 iscritti su 15 posti"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="foot"><span class="code">2026-5513</span><a class="btn primary" href="#">Vedi</a><button class="btn" type="button">Nascondi</button></div>
+      </article>
+    </div>
+  </section>
+
+  <!-- 2: bell sheet -->
+  <section class="col" aria-labelledby="t2">
+    <h2 id="t2">2 · Tap the bell: choose the number</h2>
+    <p class="why">A small sheet from the bottom with big − / + buttons. It starts one above today's number and can't go past the seats available.</p>
+    <div class="phone" id="sheet-phone">
+      <article class="card" aria-hidden="true" style="opacity:.6">
+        <div class="head"><h3>Royal Nepal Raid</h3><span class="ibtn"><svg><use href="#i-pin"/></svg></span><span class="ibtn"><svg><use href="#i-bell"/></svg></span></div>
+        <div class="where">Nepal · Motoraid</div>
+        <div class="strip"><div><div class="ww">VEN</div><div class="dd">13 nov</div></div><div class="line"><span>16 giorni</span></div><div class="end"><div class="ww">SAB</div><div class="dd">28 nov</div></div></div>
+      </article>
+      <div class="scrim" id="scrim">
+        <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-title">
+          <h3 id="sh-title">Avvisami per Royal Nepal Raid</h3>
+          <p class="now">Ora: 3 iscritti su 15 posti.</p>
+          <div class="stepper">
+            <button type="button" id="minus" aria-label="Uno in meno">−</button>
+            <output id="goal" aria-live="polite">6<small>iscritti</small></output>
+            <button type="button" id="plus" aria-label="Uno in più">+</button>
+          </div>
+          <p class="hint">Ti mando un'email quando raggiunge questo numero, poi l'avviso si spegne. Ti scrivo anche se il viaggio esce dall'elenco.</p>
+          <div class="acts">
+            <button class="btn primary" type="button">Attiva avviso</button>
+            <button class="btn" type="button">Rimuovi avviso</button>
+            <button class="btn quiet" type="button">Annulla</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3: emails -->
+  <section class="col" aria-labelledby="t3">
+    <h2 id="t3">3 · The emails</h2>
+    <p class="why">Sent right after the crawl that notices it (crawls run every 3 hours). One email per event, separate from the daily Digest.</p>
+    <div class="mail">
+      <div class="mh"><b>AMCrawler: Patagonia Trek ha 13 iscritti</b><span>Da: AMCrawler · oggi 09:02</span></div>
+      <div class="mb">
+        <p class="big">Patagonia Trek ha raggiunto 13 iscritti</p>
+        <p>dom 3 gen → gio 21 gen · 19 giorni · 13/14 iscritti · ancora senza Coordinatore.</p>
+        <p><a href="#">Vedi il viaggio</a> · <a href="#">Apri AMCrawler</a></p>
+        <p style="color:var(--muted);font-size:.85rem">L'avviso è stato spento. Per riceverne un altro, tocca la campanella del viaggio.</p>
+      </div>
+    </div>
+    <div class="mail">
+      <div class="mh"><b>AMCrawler: Perù Discovery non è più nell'elenco</b><span>Da: AMCrawler · oggi 12:01</span></div>
+      <div class="mb">
+        <p class="big">Perù Discovery non è più tra le partenze senza Coordinatore</p>
+        <p>Ha trovato un Coordinatore, è al completo oppure è stata annullata. Ultimo dato: 9/15 iscritti.</p>
+        <p><a href="#">Vedi il viaggio</a></p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<section class="legend" aria-labelledby="tl">
+  <h2 id="tl">How it behaves</h2>
+  <ul>
+    <li><b>Pin</b>: outline when off, filled blue when on. Pinned trips move into "Fissati" and leave the list below. "Fissati" follows your search and filters, and you can collapse it.</li>
+    <li><b>Bell</b>: outline when off; filled blue with an orange number when an alert is set. The seat block for that number gets an orange outline.</li>
+    <li>Pin and bell are independent: you can bell a trip without pinning it.</li>
+    <li>"Nascondi" on a pinned or belled trip removes its pin and alert.</li>
+  </ul>
+</section>
+
+<script>
+(function () {
+  var n = 6, min = 4, max = 15;
+  var out = document.getElementById('goal'), minus = document.getElementById('minus'), plus = document.getElementById('plus');
+  function paint() { out.firstChild.nodeValue = String(n); minus.disabled = n <= min; plus.disabled = n >= max; }
+  minus.addEventListener('click', function () { if (n > min) { n--; paint(); } });
+  plus.addEventListener('click', function () { if (n < max) { n++; paint(); } });
+  paint();
+  document.querySelectorAll('.js-pin').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var on = b.getAttribute('aria-pressed') !== 'true';
+      b.setAttribute('aria-pressed', String(on));
+      b.querySelector('use').setAttribute('href', on ? '#i-pin-on' : '#i-pin');
+      b.setAttribute('aria-label', on ? 'Togli da Fissati' : 'Aggiungi a Fissati');
+    });
+  });
+  document.querySelectorAll('.js-bell').forEach(function (b) {
+    b.addEventListener('click', function () { document.getElementById('sheet-phone').scrollIntoView({ behavior: 'smooth', block: 'center' }); });
+  });
+  document.querySelectorAll('.prow > button.row').forEach(function (r) {
+    r.addEventListener('click', function () {
+      var row = r.parentElement, open = row.querySelector('.open-card');
+      if (open) { open.hidden = !open.hidden; r.setAttribute('aria-expanded', String(!open.hidden)); }
+    });
+  });
+  document.querySelectorAll('a[href="#"]').forEach(function (a) { a.addEventListener('click', function (e) { e.preventDefault(); }); });
+})();
+</script>

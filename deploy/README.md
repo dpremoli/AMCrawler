@@ -13,6 +13,10 @@ Placeholders used below: the site is `viaggi.<your-domain>` (for example
 Prerequisites: swag (config in `/mnt/user/appdata/swag`) and cloudflared already
 running on the Docker network `proxy`; Cloudflare Zero Trust Access already in use.
 
+This page builds the image on the NAS with compose. To run the published image
+from an Unraid template instead, with automatic updates and the app icon, follow
+`deploy/unraid/README.md` after steps 1–7 here.
+
 ## 1. Create a private GitHub repository and push
 
 From the development PC, in the repo folder:

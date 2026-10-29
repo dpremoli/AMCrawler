@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<!-- Unraid template for AMCrawler. Copy to /boot/config/plugins/dockerMan/templates-user/my-amcrawler.xml,
+     then Docker tab > Add Container > Template "amcrawler" and fill in the values (they stay on the NAS). -->
+<Container version="2">
+  <Name>amcrawler</Name>
+  <Repository>ghcr.io/dpremoli/amcrawler:latest</Repository>
+  <Registry>https://github.com/dpremoli/AMCrawler/pkgs/container/amcrawler</Registry>
+  <Network>proxy</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/dpremoli/AMCrawler</Support>
+  <Project>https://github.com/dpremoli/AMCrawler</Project>
+  <Overview>Watches Avventure nel Mondo for Departures that still need a Coordinator and mails a daily Digest of new ones. Web UI behind swag and Cloudflare Access; no port is published on the host.</Overview>
+  <Category>Tools:</Category>
+  <WebUI/>
+  <TemplateURL/>
+  <Icon>https://raw.githubusercontent.com/dpremoli/AMCrawler/main/deploy/unraid/amcrawler-icon.png</Icon>
+  <ExtraParams/>
+  <PostArgs/>
+  <CPUset/>
+  <DonateText/>
+  <DonateLink/>
+  <Requires>swag and cloudflared on the Docker network "proxy"; a Cloudflare Access application for the site.</Requires>
+  <Config Name="Data" Target="/data" Default="/mnt/user/appdata/amcrawler/data" Mode="rw" Description="SQLite database. Keep it on a cache-only share; chown 99:100." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/amcrawler/data</Config>
+  <Config Name="Public URL" Target="AMC_PUBLIC_URL" Default="" Mode="" Description="Address of the site, used for links in the email, e.g. https://viaggi.example.com" Type="Variable" Display="always" Required="true" Mask="false"/>
+  <Config Name="Cloudflare team domain" Target="CF_ACCESS_TEAM_DOMAIN" Default="" Mode="" Description="&lt;team&gt;.cloudflareaccess.com" Type="Variable" Display="always" Required="true" Mask="false"/>
+  <Config Name="Cloudflare Access AUD tag" Target="CF_ACCESS_AUD" Default="" Mode="" Description="Application Audience (AUD) tag of the Access application" Type="Variable" Display="always" Required="true" Mask="true"/>
+  <Config Name="SMTP user" Target="SMTP_USER" Default="" Mode="" Description="Gmail address that sends the Digest" Type="Variable" Display="always" Required="true" Mask="false"/>
+  <Config Name="SMTP app password" Target="SMTP_PASSWORD" Default="" Mode="" Description="16-character Gmail app password" Type="Variable" Display="always" Required="true" Mask="true"/>
+  <Config Name="Digest from" Target="DIGEST_FROM" Default="" Mode="" Description="Sender address (normally the same as SMTP user)" Type="Variable" Display="always" Required="true" Mask="false"/>
+  <Config Name="Digest to" Target="DIGEST_TO" Default="" Mode="" Description="Owner's address that receives the Digest" Type="Variable" Display="always" Required="true" Mask="false"/>
+  <Config Name="Time zone" Target="TZ" Default="Europe/London" Mode="" Description="Time zone for the send time" Type="Variable" Display="always" Required="true" Mask="false">Europe/London</Config>
+  <Config Name="SMTP host" Target="SMTP_HOST" Default="smtp.gmail.com" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="false">smtp.gmail.com</Config>
+  <Config Name="SMTP port" Target="SMTP_PORT" Default="587" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="false">587</Config>
+  <Config Name="Database path" Target="AMC_DB_PATH" Default="/data/amcrawler.db" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="false">/data/amcrawler.db</Config>
+  <Config Name="Disable auth (dev only)" Target="AMC_DEV_NO_AUTH" Default="0" Mode="" Description="Keep 0. 1 turns off the Cloudflare Access check." Type="Variable" Display="advanced" Required="false" Mask="false">0</Config>
+</Container>

@@ -1,0 +1,11 @@
+{{ subject }}
+
+{{ name }} ha raggiunto {{ participants }} iscritti
+{{ dates }} · {{ duration }} · {{ seats }} iscritti · ancora senza Coordinatore
+
+Vedi viaggio: {{ url }}
+
+L'avviso è stato spento. Per riceverne un altro, tocca la campanella del viaggio.
+
+--
+Apri AMCrawler: {{ public_url }}

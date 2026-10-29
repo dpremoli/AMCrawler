@@ -23,6 +23,16 @@ def weekday_abbr(d: date) -> str:
     return WEEKDAYS_ABBR_IT[d.weekday()]
 
 
+def weekday_date(d: date) -> str:
+    """'ven 13 nov'."""
+    return f"{weekday_abbr(d).lower()} {short_date(d)}"
+
+
+def arrow_range(start: date, end: date) -> str:
+    """'ven 13 nov → dom 29 nov'."""
+    return f"{weekday_date(start)} → {weekday_date(end)}"
+
+
 def card_date(d: date, today: date) -> str:
     """'13 nov', or '6 gen 2027' when the year is not the current one."""
     return short_date(d) if d.year == today.year else f"{short_date(d)} {d.year}"

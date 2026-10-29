@@ -14,6 +14,7 @@ from amcrawler.mailer import (
     truncate_notes,
 )
 from amcrawler.models import Filter
+from amcrawler.source import itinerary_url
 from tests.conftest import dep
 
 
@@ -183,3 +184,62 @@ def test_render_current_subject_and_lines():
     assert subject == "AMCrawler: partenze attuali (1)"
     assert "Giappone Discovery" in html and "Giappone Discovery" in text
     assert "Vedi viaggio" in html
+
+
+def _alert_mail_data(**overrides):
+    values = dict(name="Patagonia Trek", itinerary_code="0042", start_date=date(2027, 1, 3),
+                  end_date=date(2027, 1, 21), participants=13, max_participants=14)
+    values.update(overrides)
+    return dep(**values)
+
+
+def test_render_alert_reached():
+    from amcrawler.mailer import render_alert_reached
+
+    subject, html, text = render_alert_reached(_alert_mail_data(), "https://viaggi.example.com")
+    assert subject == "AMCrawler: Patagonia Trek ha 13 iscritti"
+    for body in (html, text):
+        assert "Patagonia Trek ha raggiunto 13 iscritti" in body
+        assert "dom 3 gen → gio 21 gen" in body and "13/14 iscritti" in body
+        assert "ancora senza Coordinatore" in body
+        assert "L'avviso è stato spento. Per riceverne un altro, tocca la campanella del viaggio." in body
+        assert "https://viaggi.example.com" in body
+        assert itinerary_url("0042") in body
+
+
+def test_render_alert_reached_text_dates_line():
+    from amcrawler.mailer import render_alert_reached
+
+    _subject, _html, text = render_alert_reached(_alert_mail_data(), "")
+    assert ("dom 3 gen → gio 21 gen · 19 giorni · 13/14 iscritti · "
+            "ancora senza Coordinatore") in text
+
+
+def test_render_alert_gone_quotes_the_last_seen_data():
+    from amcrawler.mailer import render_alert_gone
+
+    subject, html, text = render_alert_gone(_alert_mail_data(participants=9),
+                                            "https://viaggi.example.com")
+    assert subject == "AMCrawler: Patagonia Trek non è più nell'elenco"
+    for body in (html, text):
+        assert "Patagonia Trek non è più tra le partenze senza Coordinatore" in body
+        assert ("Ha trovato un Coordinatore, è al completo oppure è stata annullata. "
+                "Ultimo dato: 9/14 iscritti.") in body
+        assert itinerary_url("0042") in body
+
+
+def test_render_alert_gone_omits_the_seat_count_when_unknown():
+    from amcrawler.mailer import render_alert_gone
+
+    _subject, html, text = render_alert_gone(_alert_mail_data(participants=9,
+                                                              max_participants=0),
+                                             "https://viaggi.example.com")
+    for body in (html, text):
+        assert "Ultimo dato: 9 iscritti." in body
+
+
+def test_alert_mail_escapes_the_name():
+    from amcrawler.mailer import render_alert_reached
+
+    _subject, html, _text = render_alert_reached(_alert_mail_data(name="A <b>&</b>"), "")
+    assert "<b>&</b>" not in html and "A &lt;b&gt;&amp;&lt;/b&gt;" in html

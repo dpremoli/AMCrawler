@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI
 
-from . import crawl, digest, source
+from . import alerts, crawl, digest, source
 from .config import parse_hhmm
 
 logger = logging.getLogger("amcrawler")
@@ -30,10 +30,16 @@ def minus_minutes(hhmm: str, minutes: int) -> tuple[int, int]:
 
 
 def crawl_job(app: FastAPI) -> None:
-    """Run one crawl; never raises so the scheduler keeps going."""
+    """Run one crawl, then check the Alerts when its snapshot was accepted; never raises so
+    the scheduler keeps going."""
+    store = app.state.store
     try:
+        now = datetime.now(timezone.utc)
         with source.make_client() as client:
-            crawl.run_crawl(app.state.store, client, datetime.now(timezone.utc))
+            snap = crawl.run_crawl(store, client, now)
+        if snap.ok:
+            alerts.run_alerts(store, app.state.mailer, app.state.cfg, now,
+                              store.snapshot_departures(snap.id))
     except Exception:
         logger.exception("crawl job failed")
 

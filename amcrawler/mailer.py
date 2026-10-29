@@ -8,7 +8,8 @@ from email.message import EmailMessage
 
 from .config import Config
 from .geo import country_name_it
-from .labels import date_range, describe_filter, giorni, plural_it, short_date
+from .labels import (
+    arrow_range, date_range, describe_filter, giorni, plural_it, short_date)
 from .models import Departure, Filter
 from .source import itinerary_url
 from .templating import env
@@ -85,6 +86,39 @@ def render_stale(hours: int | None, last_error: str | None) -> tuple[str, str]:
         hours=hours, hours_label=None if hours is None else plural_it(hours, "ora", "ore"),
         last_error=last_error)
     return subject, text
+
+
+def _alert_ctx(d, public_url: str) -> dict:
+    """Template data for an Alert mail; `d` is a Departure or a stored Alert."""
+    seats = (f"{d.participants}/{d.max_participants}" if d.max_participants > 0
+             else str(d.participants))
+    return {
+        "name": d.name,
+        "participants": d.participants,
+        "dates": arrow_range(d.start_date, d.end_date),
+        "duration": giorni((d.end_date - d.start_date).days + 1),
+        "seats": seats,
+        "url": itinerary_url(d.itinerary_code),
+        "public_url": public_url,
+    }
+
+
+def _render_alert(kind: str, subject: str, d, public_url: str) -> tuple[str, str, str]:
+    ctx = {"subject": subject, **_alert_ctx(d, public_url)}
+    html = env.get_template(f"email/alert_{kind}.html").render(**ctx)
+    text = env.get_template(f"email/alert_{kind}.txt").render(**ctx)
+    return subject, html, text
+
+
+def render_alert_reached(d, public_url: str) -> tuple[str, str, str]:
+    """The Alert mail for a Departure that reached the Owner's Participant number."""
+    return _render_alert("reached", f"AMCrawler: {d.name} ha {d.participants} iscritti",
+                         d, public_url)
+
+
+def render_alert_gone(a, public_url: str) -> tuple[str, str, str]:
+    """The Alert mail for a Departure that left the list; `a` holds the last-seen data."""
+    return _render_alert("gone", f"AMCrawler: {a.name} non è più nell'elenco", a, public_url)
 
 
 class MailerNotConfigured(RuntimeError):

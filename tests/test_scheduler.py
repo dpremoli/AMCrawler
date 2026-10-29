@@ -273,3 +273,37 @@ def test_no_catchup_while_the_digest_is_paused(cfg_dev, store, monkeypatch, adde
         assert "digest-catchup" not in _added(added_kwargs)
     finally:
         sched.shutdown(wait=False)
+
+
+def _crawl_job_app(cfg_dev, store, monkeypatch, ok):
+    """An app whose crawl records `ok` (a snapshot of one Departure) or a failure."""
+    from contextlib import nullcontext
+
+    from tests.conftest import dep
+
+    mailer = FakeMailer()
+    app = create_app(cfg_dev, store=store, mailer=mailer, start_scheduler=False)
+    store.set_alert(dep(id="d1", name="Patagonia Trek", participants=5), 8,
+                    datetime.now(timezone.utc))
+    monkeypatch.setattr(scheduler.source, "make_client", lambda: nullcontext())
+
+    def fake_crawl(store, client, now):
+        departures = [dep(id="d1", name="Patagonia Trek", participants=9)] if ok else None
+        store.record_snapshot(now, departures, None if ok else "boom")
+        return store.latest_snapshot()
+
+    monkeypatch.setattr(scheduler.crawl, "run_crawl", fake_crawl)
+    return app, mailer
+
+
+def test_crawl_job_checks_alerts_after_an_accepted_crawl(cfg_dev, store, monkeypatch):
+    app, mailer = _crawl_job_app(cfg_dev, store, monkeypatch, ok=True)
+    scheduler.crawl_job(app)
+    assert [m[1] for m in mailer.sent] == ["AMCrawler: Patagonia Trek ha 9 iscritti"]
+    assert store.alerts() == []
+
+
+def test_crawl_job_leaves_alerts_alone_after_a_failed_crawl(cfg_dev, store, monkeypatch):
+    app, mailer = _crawl_job_app(cfg_dev, store, monkeypatch, ok=False)
+    scheduler.crawl_job(app)
+    assert mailer.sent == [] and len(store.alerts()) == 1

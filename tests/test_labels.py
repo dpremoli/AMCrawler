@@ -71,3 +71,10 @@ def test_seats_label():
     (0, 0, 0)])
 def test_seat_percent(participants, maximum, percent):
     assert seat_percent(participants, maximum) == percent
+
+
+def test_weekday_date_and_arrow_range():
+    from amcrawler.labels import arrow_range, weekday_date
+
+    assert weekday_date(date(2026, 1, 3)) == "sab 3 gen"
+    assert arrow_range(date(2027, 1, 3), date(2027, 1, 21)) == "dom 3 gen → gio 21 gen"

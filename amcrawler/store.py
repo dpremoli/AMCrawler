@@ -1,4 +1,4 @@
-"""SQLite store: catalogue, snapshots, digest runs, hidden and settings."""
+"""SQLite store: catalogue, snapshots, digest runs, hidden, pins, Alerts and settings."""
 from __future__ import annotations
 
 import json
@@ -33,6 +33,12 @@ CREATE TABLE IF NOT EXISTS digest_entries(
     PRIMARY KEY(digest_run_id, departure_id));
 CREATE TABLE IF NOT EXISTS hidden(
     departure_id TEXT PRIMARY KEY, code TEXT, hidden_at TEXT);
+CREATE TABLE IF NOT EXISTS pins(
+    departure_id TEXT PRIMARY KEY, start_date TEXT, created_at TEXT);
+CREATE TABLE IF NOT EXISTS alerts(
+    departure_id TEXT PRIMARY KEY, threshold INTEGER, name TEXT, itinerary_code TEXT,
+    start_date TEXT, end_date TEXT, participants INTEGER, max_participants INTEGER,
+    created_at TEXT);
 CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value_json TEXT);
 """
 
@@ -57,6 +63,19 @@ class DigestRun:
     status: str
     entry_count: int
     error: str | None
+
+
+@dataclass(frozen=True)
+class Alert:
+    """An Alert with the Departure data last seen, so a "gone" mail can quote it."""
+    departure_id: str
+    threshold: int
+    name: str
+    itinerary_code: str
+    start_date: date
+    end_date: date
+    participants: int
+    max_participants: int
 
 
 def _ts(value: datetime) -> str:
@@ -301,9 +320,12 @@ class Store:
 
     # hidden
     def hide(self, departure_id: str, code: str, at: datetime) -> None:
+        """Hide a Departure; its pin and Alert go too and unhide does not bring them back."""
         with self._conn() as conn:
             conn.execute("INSERT OR REPLACE INTO hidden VALUES (?,?,?)",
                          (departure_id, code, _ts(at)))
+            conn.execute("DELETE FROM pins WHERE departure_id = ?", (departure_id,))
+            conn.execute("DELETE FROM alerts WHERE departure_id = ?", (departure_id,))
 
     def unhide(self, departure_id: str) -> None:
         with self._conn() as conn:
@@ -312,6 +334,60 @@ class Store:
     def hidden_ids(self) -> set[str]:
         with self._conn() as conn:
             return {r["departure_id"] for r in conn.execute("SELECT departure_id FROM hidden")}
+
+    # pins
+    def pin(self, departure_id: str, start_date: date, at: datetime) -> None:
+        with self._conn() as conn:
+            conn.execute("INSERT OR REPLACE INTO pins VALUES (?,?,?)",
+                         (departure_id, start_date.isoformat(), _ts(at)))
+
+    def unpin(self, departure_id: str) -> None:
+        with self._conn() as conn:
+            conn.execute("DELETE FROM pins WHERE departure_id = ?", (departure_id,))
+
+    def pinned_ids(self) -> set[str]:
+        with self._conn() as conn:
+            return {r["departure_id"] for r in conn.execute("SELECT departure_id FROM pins")}
+
+    def delete_pins_before(self, day: date) -> int:
+        """Drop the pins of Departures that left before `day`."""
+        with self._conn() as conn:
+            return conn.execute("DELETE FROM pins WHERE start_date < ?",
+                                (day.isoformat(),)).rowcount
+
+    # Alerts
+    def set_alert(self, d: Departure, threshold: int, at: datetime) -> None:
+        """Set the Alert on `d`, replacing any earlier threshold."""
+        with self._conn() as conn:
+            conn.execute("INSERT OR REPLACE INTO alerts VALUES (?,?,?,?,?,?,?,?,?)",
+                         (d.id, threshold, d.name, d.itinerary_code, d.start_date.isoformat(),
+                          d.end_date.isoformat(), d.participants, d.max_participants,
+                          _ts(at)))
+
+    def refresh_alert(self, d: Departure) -> None:
+        """Update the last-seen data of `d`'s Alert; the threshold stays."""
+        with self._conn() as conn:
+            conn.execute(
+                "UPDATE alerts SET name = ?, itinerary_code = ?, start_date = ?, end_date = ?, "
+                "participants = ?, max_participants = ? WHERE departure_id = ?",
+                (d.name, d.itinerary_code, d.start_date.isoformat(), d.end_date.isoformat(),
+                 d.participants, d.max_participants, d.id))
+
+    def delete_alert(self, departure_id: str) -> None:
+        with self._conn() as conn:
+            conn.execute("DELETE FROM alerts WHERE departure_id = ?", (departure_id,))
+
+    def alerts(self) -> list[Alert]:
+        with self._conn() as conn:
+            rows = conn.execute(
+                "SELECT * FROM alerts ORDER BY start_date, departure_id").fetchall()
+        return [Alert(r["departure_id"], r["threshold"], r["name"], r["itinerary_code"],
+                      date.fromisoformat(r["start_date"]), date.fromisoformat(r["end_date"]),
+                      r["participants"], r["max_participants"])
+                for r in rows]
+
+    def alert_thresholds(self) -> dict[str, int]:
+        return {a.departure_id: a.threshold for a in self.alerts()}
 
     # settings
     def _get_setting(self, key: str):

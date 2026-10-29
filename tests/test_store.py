@@ -204,3 +204,81 @@ def test_is_send_day_needs_enabled_and_weekday(store):
     assert store.is_send_day(wednesday)
     store.set_digest_enabled(False)
     assert not store.is_send_day(wednesday)
+
+
+def test_init_adds_pin_and_alert_tables_to_an_older_database(tmp_path):
+    import sqlite3
+    from contextlib import closing
+
+    path = str(tmp_path / "old.db")
+    with closing(sqlite3.connect(path)) as conn:  # a database from before pins and Alerts
+        conn.execute("CREATE TABLE hidden(departure_id TEXT PRIMARY KEY, code TEXT, "
+                     "hidden_at TEXT)")
+        conn.execute("INSERT INTO hidden VALUES ('d9', 'c', 'x')")
+        conn.commit()
+    s = Store(path)
+    s.init()
+    s.pin("d1", date(2026, 12, 1), STORE_NOW)
+    s.set_alert(dep(id="d1"), 7, STORE_NOW)
+    assert s.pinned_ids() == {"d1"} and set(s.alert_thresholds()) == {"d1"}
+    assert s.hidden_ids() == {"d9"}
+
+
+def test_pin_roundtrip(store):
+    store.pin("d1", date(2026, 12, 1), STORE_NOW)
+    store.pin("d1", date(2026, 12, 1), STORE_NOW)
+    store.pin("d2", date(2026, 11, 1), STORE_NOW)
+    assert store.pinned_ids() == {"d1", "d2"}
+    store.unpin("d1")
+    store.unpin("d1")
+    assert store.pinned_ids() == {"d2"}
+
+
+def test_delete_pins_before_keeps_today_and_later(store):
+    store.pin("old", date(2026, 10, 27), STORE_NOW)
+    store.pin("today", date(2026, 10, 28), STORE_NOW)
+    store.pin("later", date(2026, 11, 1), STORE_NOW)
+    assert store.delete_pins_before(date(2026, 10, 28)) == 1
+    assert store.pinned_ids() == {"today", "later"}
+
+
+def test_alert_roundtrip_keeps_last_seen_data(store):
+    d = dep(id="d1", itinerary_code="0042", name="Patagonia Trek", participants=8,
+            max_participants=14)
+    store.set_alert(d, 12, STORE_NOW)
+    a = store.alerts()[0]
+    assert (a.departure_id, a.threshold, a.name, a.itinerary_code) == (
+        "d1", 12, "Patagonia Trek", "0042")
+    assert (a.start_date, a.end_date) == (d.start_date, d.end_date)
+    assert (a.participants, a.max_participants) == (8, 14)
+    assert store.alert_thresholds() == {"d1": 12}
+
+
+def test_setting_an_alert_again_replaces_the_threshold(store):
+    store.set_alert(dep(id="d1"), 7, STORE_NOW)
+    store.set_alert(dep(id="d1", participants=6), 9, STORE_NOW + H)
+    assert [(a.threshold, a.participants) for a in store.alerts()] == [(9, 6)]
+
+
+def test_refresh_alert_updates_only_the_last_seen_fields(store):
+    store.set_alert(dep(id="d1", participants=5), 9, STORE_NOW)
+    store.refresh_alert(dep(id="d1", participants=7, name="Nuovo nome", max_participants=12))
+    a = store.alerts()[0]
+    assert (a.threshold, a.participants, a.name, a.max_participants) == (9, 7, "Nuovo nome", 12)
+
+
+def test_delete_alert(store):
+    store.set_alert(dep(id="d1"), 7, STORE_NOW)
+    store.delete_alert("d1")
+    store.delete_alert("d1")
+    assert store.alerts() == []
+
+
+def test_hiding_removes_the_pin_and_the_alert(store):
+    store.pin("d1", date(2026, 12, 1), STORE_NOW)
+    store.pin("d2", date(2026, 12, 1), STORE_NOW)
+    store.set_alert(dep(id="d1"), 7, STORE_NOW)
+    store.hide("d1", "2026-0001", STORE_NOW)
+    assert store.pinned_ids() == {"d2"} and store.alerts() == []
+    store.unhide("d1")  # Annulla does not bring them back
+    assert store.pinned_ids() == {"d2"} and store.alerts() == []

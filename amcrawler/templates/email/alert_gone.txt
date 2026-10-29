@@ -1,0 +1,9 @@
+{{ subject }}
+
+{{ name }} non è più tra le partenze senza Coordinatore
+Ha trovato un Coordinatore, è al completo oppure è stata annullata. Ultimo dato: {{ seats }} iscritti.
+
+Vedi viaggio: {{ url }}
+
+--
+Apri AMCrawler: {{ public_url }}

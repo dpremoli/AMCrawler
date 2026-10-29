@@ -28,7 +28,7 @@ cd /mnt/user/appdata/amcrawler/app/deploy/unraid
 ```
 
 ```bash
-cp amcrawler-icon.png /boot/config/plugins/dockerMan/images/amcrawler-icon.png && mkdir -p /var/lib/docker/unraid/images && cp amcrawler-icon.png /var/lib/docker/unraid/images/amcrawler-icon.png
+mkdir -p /boot/config/plugins/dockerMan/images /var/lib/docker/unraid/images && cp amcrawler-icon.png /boot/config/plugins/dockerMan/images/amcrawler-icon.png && cp amcrawler-icon.png /var/lib/docker/unraid/images/amcrawler-icon.png
 ```
 
 ```bash

@@ -342,3 +342,19 @@ def test_digest_current_failure_modes(client, mailer, monkeypatch):
 
     monkeypatch.setattr(mailer, "send", boom)
     assert client.post("/digest/current").headers["location"] == "/settings?elenco=errore"
+
+
+def test_theme_choice_on_settings_page(client):
+    html = client.get("/settings").text
+    for value in ("auto", "light", "dark"):
+        assert f'name="theme" value="{value}"' in html
+    # the stored choice is applied in <head>, before the stylesheet, so the page never flashes
+    head = html.split("</head>")[0]
+    assert head.index('localStorage.getItem("amc-theme")') < head.index("app.css")
+
+
+def test_css_lets_a_forced_theme_win_over_the_device():
+    from pathlib import Path
+    css = (Path(__file__).parent.parent / "amcrawler" / "static" / "app.css").read_text(encoding="utf-8")
+    assert ':root:not([data-theme="light"])' in css
+    assert ':root[data-theme="dark"]' in css

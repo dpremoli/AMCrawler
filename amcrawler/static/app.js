@@ -35,6 +35,26 @@
   if (desktop && desktop.addEventListener) { desktop.addEventListener("change", paintSeg); }
   setView("list");
 
+  // Theme (Impostazioni): auto follows the device; light/dark are stored per device.
+  // base.html applies the stored choice before the stylesheet loads.
+  var themeInputs = document.querySelectorAll('input[name="theme"]');
+  if (themeInputs.length) {
+    var current = document.documentElement.getAttribute("data-theme") || "auto";
+    themeInputs.forEach(function (input) {
+      input.checked = input.value === current;
+      input.addEventListener("change", function () {
+        var root = document.documentElement;
+        if (input.value === "auto") { root.removeAttribute("data-theme"); }
+        else { root.setAttribute("data-theme", input.value); }
+        try {
+          if (input.value === "auto") { window.localStorage.removeItem("amc-theme"); }
+          else { window.localStorage.setItem("amc-theme", input.value); }
+        } catch (e) { /* private mode: applies to this page only */ }
+        document.dispatchEvent(new CustomEvent("amc:theme", { detail: input.value }));
+      });
+    });
+  }
+
   // Filter bottom sheet.
   var sheet = document.getElementById("filters");
   var openFilters = document.getElementById("open-filters");

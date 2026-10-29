@@ -6,10 +6,11 @@
   --map-stroke: #fff;
   --surface-2: #eef1f4; --soon: #9a5b00; --soon-bg: #fff3d6;
   --fill: #2f7d4f; --fill-bg: #dfe6ec; --one: #d9640f;
-  color-scheme: light dark;
+  color-scheme: light;
 }
+/* Dark follows the device unless Impostazioni forced a theme (data-theme on <html>). */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #101317; --surface: #1a1f25; --text: #e8ebef; --muted: #9aa5b1;
     --line: #2d343c; --accent: #5aa2f0; --accent-text: #0b1118; --new: #fb923c;
     --bad: #ff8a80; --bad-bg: #3a1c1a;
@@ -17,8 +18,28 @@
     --map-stroke: #101317;
     --surface-2: #222830; --soon: #f5c060; --soon-bg: #3a2e14;
     --fill: #5cc489; --fill-bg: #2a3139; --one: #ff9a3d;
+    color-scheme: dark;
   }
 }
+:root[data-theme="dark"] {
+  --bg: #101317; --surface: #1a1f25; --text: #e8ebef; --muted: #9aa5b1;
+  --line: #2d343c; --accent: #5aa2f0; --accent-text: #0b1118; --new: #fb923c;
+  --bad: #ff8a80; --bad-bg: #3a1c1a;
+  --map-sea: #1a1f25; --map-none: #262d35; --map-low: #5d7f9f; --map-high: #bdd6ee;
+  --map-stroke: #101317;
+  --surface-2: #222830; --soon: #f5c060; --soon-bg: #3a2e14;
+  --fill: #5cc489; --fill-bg: #2a3139; --one: #ff9a3d;
+  color-scheme: dark;
+}
+.theme-choice { display: flex; gap: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.theme-choice label {
+  flex: 1; display: flex; align-items: center; justify-content: center; min-height: 44px;
+  cursor: pointer; color: var(--text);
+}
+.theme-choice label + label { border-left: 1px solid var(--line); }
+.theme-choice input { position: absolute; opacity: 0; pointer-events: none; }
+.theme-choice label:has(input:checked) { background: var(--accent); color: var(--accent-text); }
+.theme-choice label:has(input:focus-visible) { outline: 3px solid var(--accent); outline-offset: -3px; }
 * { box-sizing: border-box; }
 body {
   margin: 0; background: var(--bg); color: var(--text);

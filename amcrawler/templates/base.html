@@ -7,6 +7,13 @@
 <title>{% block title %}AMCrawler{% endblock %}</title>
 <link rel="manifest" href="/manifest.webmanifest" crossorigin="use-credentials">
 <link rel="icon" href="{{ static_url('icon.svg') }}" type="image/svg+xml">
+<script>
+  // Theme chosen in Impostazioni (per device); runs before the stylesheet so the page never flashes.
+  try {
+    var t = localStorage.getItem("amc-theme");
+    if (t === "light" || t === "dark") { document.documentElement.setAttribute("data-theme", t); }
+  } catch (e) { /* storage blocked: follow the device */ }
+</script>
 <link rel="stylesheet" href="{{ static_url('app.css') }}">
 </head>
 <body>

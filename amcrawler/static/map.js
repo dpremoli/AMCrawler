@@ -33,6 +33,8 @@
   }
 
   function isDark() {
+    var forced = document.documentElement.getAttribute("data-theme");
+    if (forced === "light" || forced === "dark") { return forced === "dark"; }
     return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
   }
 
@@ -179,6 +181,7 @@
     var mq = window.matchMedia("(prefers-color-scheme: dark)");
     var onScheme = function () { if (drawnScheme !== null && drawnScheme !== isDark()) { ensureDrawn(); } };
     if (mq.addEventListener) { mq.addEventListener("change", onScheme); }
+    document.addEventListener("amc:theme", onScheme);
   }
 
   // Desktop shows list and map together, so draw straight away; on a phone the

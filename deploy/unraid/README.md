@@ -6,28 +6,17 @@ The Unraid template in this folder runs that image, so Unraid can update it like
 any other container. swag, Cloudflare Tunnel and Access stay exactly as in
 `deploy/README.md`; only how the container is created changes.
 
-The package is private, so the NAS has to log in to ghcr.io once.
+The repository is private but the image package is public, so the NAS needs no
+credentials. The image holds code only: hostnames, addresses, passwords and the
+Access AUD tag are entered in the Unraid form and stay on the NAS.
 
-## 1. Log the NAS in to ghcr.io
+## 1. Make the image public (once)
 
-On GitHub: Settings, Developer settings, Personal access tokens, Tokens (classic),
-Generate new token. Tick only `read:packages`, no expiry or a long one. Copy it.
-
-On the NAS:
-
-```bash
-docker login ghcr.io -u dpremoli
-```
-
-Paste the token as the password. Unraid keeps `/root` in RAM, so save the login
-on the flash drive and restore it at every boot:
+On GitHub: your profile, Packages, `amcrawler`, Package settings, Danger Zone,
+Change visibility, Public. Check from the NAS:
 
 ```bash
-cp /root/.docker/config.json /boot/config/ghcr-docker-config.json
-```
-
-```bash
-printf '\nmkdir -p /root/.docker && cp /boot/config/ghcr-docker-config.json /root/.docker/config.json\n' >> /boot/config/go
+docker pull ghcr.io/dpremoli/amcrawler:latest
 ```
 
 ## 2. Install the icon and the template
@@ -46,7 +35,7 @@ cp amcrawler-icon.png /boot/config/plugins/dockerMan/images/amcrawler-icon.png &
 cp amcrawler.xml /boot/config/plugins/dockerMan/templates-user/my-amcrawler.xml
 ```
 
-The icon is copied by hand because Unraid cannot download it from a private repository.
+The icon is copied by hand because Unraid cannot download it from the private repository.
 
 ## 3. Swap the compose container for the template one
 
@@ -79,11 +68,7 @@ Unraid's Docker tab shows "update ready" when a new `:latest` is published. To
 apply it without clicking, install **CA Auto Update Applications** from Apps,
 then in its settings turn auto-update on for `amcrawler` (for example daily).
 
-If the Docker tab shows the update status as "not available", Unraid could not
-read the private registry: check step 1 (`docker pull ghcr.io/dpremoli/amcrawler:latest`
-must work on the NAS).
-
 ## Releasing a change
 
-From the PC: `git push origin main`. GitHub Actions builds the new image in a few
-minutes (Actions tab), and the NAS picks it up at the next update check.
+From the PC: `git push origin main`. GitHub Actions builds the new image in about
+a minute (Actions tab), and the NAS picks it up at the next update check.

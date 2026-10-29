@@ -123,6 +123,15 @@ def test_static_and_manifest(client):
     assert client.get("/manifest.webmanifest").json()["name"] == "AMCrawler"
 
 
+def test_static_urls_carry_content_hash(client):
+    # a deploy must not be hidden behind a cached old stylesheet or script
+    html = client.get("/").text
+    for name in ("app.css", "app.js", "map.js", "calendar.js"):
+        m = re.search(r'/static/' + re.escape(name) + r'\?v=([0-9a-f]{10})"', html)
+        assert m, name
+        assert client.get(f"/static/{name}?v={m.group(1)}").status_code == 200
+
+
 def test_auth_enforced_when_not_dev(app_client, cfg_auth):
     c = app_client(cfg_auth)
     assert c.get("/").status_code == 403
@@ -175,7 +184,7 @@ def test_head_index_ok_in_dev(client):
 
 
 def test_favicon_link(client):
-    assert '<link rel="icon" href="/static/icon.svg" type="image/svg+xml">' in client.get("/").text
+    assert re.search(r'<link rel="icon" href="/static/icon\.svg\?v=[0-9a-f]{10}" type="image/svg\+xml">', client.get("/").text)
     assert client.get("/static/icon.svg").status_code == 200
 
 

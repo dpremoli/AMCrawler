@@ -6,11 +6,11 @@
 <meta name="theme-color" content="#0b5cad">
 <title>{% block title %}AMCrawler{% endblock %}</title>
 <link rel="manifest" href="/manifest.webmanifest" crossorigin="use-credentials">
-<link rel="icon" href="/static/icon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/static/app.css">
+<link rel="icon" href="{{ static_url('icon.svg') }}" type="image/svg+xml">
+<link rel="stylesheet" href="{{ static_url('app.css') }}">
 </head>
 <body>
 {% block body %}{% endblock %}
-<script src="/static/app.js" defer></script>
+<script src="{{ static_url('app.js') }}" defer></script>
 </body>
 </html>

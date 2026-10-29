@@ -9,20 +9,13 @@
       .catch(function () { return false; });
   }
 
-  // View toggle: list, map or calendar, remembered per device. map.js and calendar.js
-  // listen for "amc:view". On desktop the list is always shown, so "list" means the map.
-  var VIEWS = ["list", "map", "cal"];
+  // View toggle: list, map or calendar; every page load opens on the list. map.js and
+  // calendar.js listen for "amc:view". On desktop the list is always shown, so "list" means the map.
   var layout = document.querySelector(".layout");
   var segButtons = document.querySelectorAll(".seg-btn");
   var desktop = window.matchMedia ? window.matchMedia("(min-width: 900px)") : null;
   var view = "list";
 
-  function storedView() {
-    try { return window.localStorage.getItem("amc-view"); } catch (e) { return null; }
-  }
-  function storeView(v) {
-    try { window.localStorage.setItem("amc-view", v); } catch (e) { /* private mode */ }
-  }
   function paintSeg() {
     var shown = desktop && desktop.matches && view === "list" ? "map" : view;
     segButtons.forEach(function (b) {
@@ -37,18 +30,10 @@
     document.dispatchEvent(new CustomEvent("amc:view", { detail: v }));
   }
   segButtons.forEach(function (b) {
-    b.addEventListener("click", function () {
-      var v = b.getAttribute("data-view");
-      storeView(v);
-      setView(v);
-    });
+    b.addEventListener("click", function () { setView(b.getAttribute("data-view")); });
   });
   if (desktop && desktop.addEventListener) { desktop.addEventListener("change", paintSeg); }
-  // A tap on a map country reloads with #lista (phone): show the list, not the saved view.
-  var fromMap = window.location.hash === "#lista";
-  var saved = fromMap ? "list" : storedView();
-  if (fromMap) { storeView("list"); }
-  setView(VIEWS.indexOf(saved) === -1 ? "list" : saved);
+  setView("list");
 
   // Filter bottom sheet.
   var sheet = document.getElementById("filters");

@@ -86,8 +86,8 @@
 </div>
 
 <script type="application/json" id="map-data">{{ map_data | tojson }}</script>
-<script src="/static/vendor/d3.v7.9.0.min.js" defer></script>
-<script src="/static/vendor/topojson-client.3.1.0.min.js" defer></script>
-<script src="/static/map.js" defer></script>
-<script src="/static/calendar.js" defer></script>
+<script src="{{ static_url('vendor/d3.v7.9.0.min.js') }}" defer></script>
+<script src="{{ static_url('vendor/topojson-client.3.1.0.min.js') }}" defer></script>
+<script src="{{ static_url('map.js') }}" defer></script>
+<script src="{{ static_url('calendar.js') }}" defer></script>
 {% endblock %}

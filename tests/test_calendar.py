@@ -1,3 +1,4 @@
+import re
 import json
 import shutil
 import subprocess
@@ -23,7 +24,7 @@ def test_calendar_pane_markup(client):
     pane = html.split('id="calendario"', 1)[1].split("</section>", 1)[0]
     assert 'aria-label="Mese precedente"' in pane and 'aria-label="Mese successivo"' in pane
     assert "Nessuna partenza in questo mese." in pane
-    assert '<script src="/static/calendar.js" defer></script>' in html
+    assert re.search(r'<script src="/static/calendar\.js\?v=[0-9a-f]{10}" defer></script>', html)
 
 
 def test_calendar_script_is_served(client):

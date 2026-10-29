@@ -56,3 +56,31 @@ def test_digest_skip_prints_reason_and_exits_0(monkeypatch, capsys, status, reas
     monkeypatch.setattr(cli.digest, "run_digest", lambda *a: status)
     assert cli.main(["digest"]) == 0
     assert f"digest skipped: {reason}" in capsys.readouterr().out
+
+
+def test_crawl_also_checks_alerts_and_pins(monkeypatch, capsys):
+    from amcrawler.config import load_config
+    from amcrawler.store import Store
+    from tests.conftest import TODAY, dep
+
+    cfg = load_config()
+    store = Store(cfg.db_path)
+    store.init()
+    now = datetime.now(timezone.utc)
+    store.pin("old", TODAY.replace(year=2020), now)
+    sent = []
+
+    class _Mailer:
+        def send(self, subject, text, html=None):
+            sent.append(subject)
+
+    def fake_crawl(store, client, now):
+        store.record_snapshot(now, [dep(id="d1", name="Trek", participants=9)])
+        return store.latest_snapshot()
+
+    store.set_alert(dep(id="d1", name="Trek", participants=5), 8, now)
+    monkeypatch.setattr(cli.source, "make_client", lambda: _Client())
+    monkeypatch.setattr(cli.crawl, "run_crawl", fake_crawl)
+    monkeypatch.setattr(cli.SmtpMailer, "from_config", classmethod(lambda c, cfg: _Mailer()))
+    assert cli.main(["crawl"]) == 0
+    assert sent == ["AMCrawler: Trek ha 9 iscritti"] and store.pinned_ids() == set()

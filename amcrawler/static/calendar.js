@@ -84,8 +84,21 @@
     return counts;
   }
 
+  // The view, month and day to come back to after a reload made by the page itself (pin, Alert),
+  // from the sessionStorage text; null unless it was saved for this very page and is sane.
+  function parseRestore(raw, url) {
+    var r;
+    try { r = JSON.parse(raw); } catch (e) { return null; }
+    if (!r || r.url !== url || ["list", "map", "cal"].indexOf(r.view) < 0) { return null; }
+    return {
+      view: r.view,
+      month: /^\d{4}-\d{2}$/.test(r.month) ? r.month : null,
+      selected: /^\d{4}-\d{2}-\d{2}$/.test(r.selected) ? r.selected : null
+    };
+  }
+
   var api = {
-    countDates: countDates, keepSelection: keepSelection, openingMonth: openingMonth, monthRange: monthRange, firstDayIn: firstDayIn,
+    parseRestore: parseRestore, countDates: countDates, keepSelection: keepSelection, openingMonth: openingMonth, monthRange: monthRange, firstDayIn: firstDayIn,
     monthWeeks: monthWeeks, shiftMonth: shiftMonth, monthTitle: monthTitle,
     dayLabel: dayLabel, selectionLine: selectionLine
   };
@@ -93,6 +106,12 @@
   if (typeof document === "undefined") { return; }
 
   // ---- page ----
+
+  // app.js (loaded after this) opens on this view and clears the saved state
+  var restore = null;
+  try { restore = parseRestore(window.sessionStorage.getItem("amc-restore"), location.href); }
+  catch (e) { /* private mode: opens on the list */ }
+  window.amcRestore = restore;
 
   var layout = document.querySelector(".layout");
   var list = document.getElementById("lista");
@@ -138,6 +157,8 @@
       b.setAttribute("aria-pressed", String(b.getAttribute("data-date") === selected));
     });
     line.textContent = selected ? selectionLine(selected, counts[selected] || 0) : "";
+    layout.setAttribute("data-cal-month", month || "");
+    layout.setAttribute("data-cal-selected", selected || "");
   }
 
   function el(tag, cls, text) {
@@ -243,5 +264,11 @@
     }).observe(list, { childList: true });
   }
   document.addEventListener("amc:view", function () { render(false); });
-  render(true);
+  if (restore && restore.view === "cal" && restore.month) {
+    month = restore.month;
+    selected = restore.selected;
+    render(false);
+  } else {
+    render(true);
+  }
 })();

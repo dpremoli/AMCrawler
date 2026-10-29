@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS pins(
 CREATE TABLE IF NOT EXISTS alerts(
     departure_id TEXT PRIMARY KEY, threshold INTEGER, name TEXT, itinerary_code TEXT,
     start_date TEXT, end_date TEXT, participants INTEGER, max_participants INTEGER,
-    created_at TEXT);
+    created_at TEXT, misses INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value_json TEXT);
 """
 
@@ -76,6 +76,7 @@ class Alert:
     end_date: date
     participants: int
     max_participants: int
+    misses: int = 0  # accepted crawls in a row that did not list the Departure
 
 
 def _ts(value: datetime) -> str:
@@ -126,6 +127,8 @@ class Store:
                 conn.execute(
                     "UPDATE snapshot_departures SET catalogued = 0 WHERE itinerary_id "
                     "NOT IN (SELECT id FROM itineraries)")
+            if "misses" not in {r["name"] for r in conn.execute("PRAGMA table_info(alerts)")}:
+                conn.execute("ALTER TABLE alerts ADD COLUMN misses INTEGER NOT NULL DEFAULT 0")
 
     # catalogue
     def save_catalogue(self, items: list[Itinerary], fetched_at: datetime) -> None:
@@ -359,19 +362,47 @@ class Store:
     def set_alert(self, d: Departure, threshold: int, at: datetime) -> None:
         """Set the Alert on `d`, replacing any earlier threshold."""
         with self._conn() as conn:
-            conn.execute("INSERT OR REPLACE INTO alerts VALUES (?,?,?,?,?,?,?,?,?)",
+            conn.execute("INSERT OR REPLACE INTO alerts(departure_id, threshold, name, "
+                         "itinerary_code, start_date, end_date, participants, max_participants, "
+                         "created_at) VALUES (?,?,?,?,?,?,?,?,?)",
                          (d.id, threshold, d.name, d.itinerary_code, d.start_date.isoformat(),
                           d.end_date.isoformat(), d.participants, d.max_participants,
                           _ts(at)))
 
     def refresh_alert(self, d: Departure) -> None:
-        """Update the last-seen data of `d`'s Alert; the threshold stays."""
+        """Update the last-seen data of `d`'s Alert and clear its misses; the threshold stays."""
         with self._conn() as conn:
             conn.execute(
                 "UPDATE alerts SET name = ?, itinerary_code = ?, start_date = ?, end_date = ?, "
-                "participants = ?, max_participants = ? WHERE departure_id = ?",
+                "participants = ?, max_participants = ?, misses = 0 WHERE departure_id = ?",
                 (d.name, d.itinerary_code, d.start_date.isoformat(), d.end_date.isoformat(),
                  d.participants, d.max_participants, d.id))
+
+    def note_alert_miss(self, departure_id: str) -> int:
+        """Count one more accepted crawl without the Departure; returns the new count."""
+        with self._conn() as conn:
+            conn.execute("UPDATE alerts SET misses = misses + 1 WHERE departure_id = ?",
+                         (departure_id,))
+            row = conn.execute("SELECT misses FROM alerts WHERE departure_id = ?",
+                               (departure_id,)).fetchone()
+        return row["misses"] if row else 0
+
+    def claim_alert(self, departure_id: str, threshold: int) -> bool:
+        """Delete the Alert before its mail goes out; True for exactly one caller, so two
+        crawls finishing together cannot both send it. A changed threshold does not match."""
+        with self._conn() as conn:
+            return conn.execute("DELETE FROM alerts WHERE departure_id = ? AND threshold = ?",
+                                (departure_id, threshold)).rowcount == 1
+
+    def restore_alert(self, a: Alert, at: datetime) -> None:
+        """Put back a claimed Alert whose mail did not go out (unless one was set since)."""
+        with self._conn() as conn:
+            conn.execute("INSERT OR IGNORE INTO alerts(departure_id, threshold, name, "
+                         "itinerary_code, start_date, end_date, participants, max_participants, "
+                         "created_at, misses) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                         (a.departure_id, a.threshold, a.name, a.itinerary_code,
+                          a.start_date.isoformat(), a.end_date.isoformat(), a.participants,
+                          a.max_participants, _ts(at), a.misses))
 
     def delete_alert(self, departure_id: str) -> None:
         with self._conn() as conn:
@@ -383,7 +414,7 @@ class Store:
                 "SELECT * FROM alerts ORDER BY start_date, departure_id").fetchall()
         return [Alert(r["departure_id"], r["threshold"], r["name"], r["itinerary_code"],
                       date.fromisoformat(r["start_date"]), date.fromisoformat(r["end_date"]),
-                      r["participants"], r["max_participants"])
+                      r["participants"], r["max_participants"], r["misses"])
                 for r in rows]
 
     def alert_thresholds(self) -> dict[str, int]:

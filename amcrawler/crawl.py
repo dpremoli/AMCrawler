@@ -3,10 +3,13 @@ from __future__ import annotations
 
 import dataclasses
 import logging
+import threading
 from datetime import datetime, timedelta
 
 import httpx
 
+from . import alerts
+from .config import Config
 from .models import Departure
 from .source import SourceError, fetch_catalogue, fetch_uncovered
 from .store import SnapshotInfo, Store
@@ -21,6 +24,9 @@ CONFIRM_SUSPICIOUS = 2  # earlier rejections that must agree before a drop is ac
 CONFIRM_TOLERANCE = 0.10
 CONFIRM_SPAN = timedelta(hours=24)  # the agreeing rejections must reach back this far
 SUSPICIOUS_ERRORS = ("suspicious empty result", "suspicious drop")
+
+
+_RUN_LOCK = threading.Lock()
 
 
 def _confirmed(store: Store, count: int, now: datetime) -> tuple[timedelta, int] | None:
@@ -111,3 +117,21 @@ def run_crawl(store: Store, client: httpx.Client, now: datetime,
     store.record_snapshot(now, departures)
     log.info("crawl ok: %d Departures", len(departures))
     return store.latest_snapshot()
+
+
+def crawl_and_alert(store: Store, client: httpx.Client, mailer, cfg: Config,
+                    now: datetime) -> SnapshotInfo | None:
+    """One crawl, then the Alert check and pin cleanup when its snapshot was accepted.
+
+    Scheduled crawls can overlap (3-hourly, pre-Digest, startup): a call made while another
+    runs in this process skips and returns None, as that crawl is about to be fresh anyway."""
+    if not _RUN_LOCK.acquire(blocking=False):
+        log.info("crawl already running: skipped")
+        return None
+    try:
+        snap = run_crawl(store, client, now)
+        if snap.ok:
+            alerts.run_alerts(store, mailer, cfg, now, store.snapshot_departures(snap.id))
+        return snap
+    finally:
+        _RUN_LOCK.release()

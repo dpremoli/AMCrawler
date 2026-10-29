@@ -124,3 +124,19 @@ def test_pinned_cards_show_once_per_view():
 def test_calendar_ignores_cards_inside_fissati():
     js = (STATIC / "calendar.js").read_text(encoding="utf-8")
     assert 'c.closest(".pins") !== null' in js
+
+
+@pytest.mark.skipif(node is None, reason="node is not installed")
+def test_restore_state_only_for_the_same_page_and_valid_values():
+    raw = json.dumps({"url": "http://x/?a=1", "view": "cal", "month": "2026-12",
+                      "selected": "2026-12-05"})
+    assert _js("c.parseRestore(" + json.dumps(raw) + ', "http://x/?a=1")') == {
+        "view": "cal", "month": "2026-12", "selected": "2026-12-05"}
+    assert _js("c.parseRestore(" + json.dumps(raw) + ', "http://x/?a=2")') is None
+    assert _js('c.parseRestore("nonsense", "http://x/")') is None
+    assert _js('c.parseRestore(null, "http://x/")') is None
+    bad = json.dumps({"url": "u", "view": "evil", "month": "x", "selected": "y"})
+    assert _js("c.parseRestore(" + json.dumps(bad) + ', "u")') is None
+    odd = json.dumps({"url": "u", "view": "map", "month": "x", "selected": "y"})
+    assert _js("c.parseRestore(" + json.dumps(odd) + ', "u")') == {
+        "view": "map", "month": None, "selected": None}

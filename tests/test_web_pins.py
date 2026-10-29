@@ -101,6 +101,11 @@ def test_alert_threshold_must_be_an_integer(client, raw):
     assert r.status_code == 400 and r.json()["error"] == "Numero di iscritti non valido."
 
 
+def test_a_huge_threshold_is_a_400_not_a_500(client):
+    r = client.post("/alert/d1", data={"threshold": "9" * 5000})
+    assert r.status_code == 400 and r.json()["error"] == "Il viaggio ha solo 15 posti."
+
+
 def test_alert_threshold_missing_is_400(client):
     assert client.post("/alert/d1").status_code == 400
 
@@ -245,9 +250,10 @@ def test_fissati_row_shows_the_bell_threshold(client):
     client.post("/pin/d1")
     assert 'class="bell-mini"></span>' in _pins_block(client.get("/").text)
     client.post("/alert/d1", data={"threshold": "12"})
-    mini = re.search(r'<span class="bell-mini">.*?</span>', _pins_block(client.get("/").text),
-                     re.S).group(0)
+    mini = re.search(r'<span class="bell-mini"[^>]*>.*?</span>',
+                     _pins_block(client.get("/").text), re.S).group(0)
     assert "12" in mini and "#i-bell-on" in mini
+    assert 'role="img" aria-label="avviso a 12 iscritti"' in mini
 
 
 def test_bell_sheet_is_in_the_page_once(client):

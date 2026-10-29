@@ -41,7 +41,22 @@
     b.addEventListener("click", function () { setView(b.getAttribute("data-view")); });
   });
   if (desktop && desktop.addEventListener) { desktop.addEventListener("change", paintSeg); }
-  setView("list");
+  // a reload made by the page itself (pin, Alert) comes back to the same view; calendar.js
+  // has already read the month and day from the same saved state
+  var restored = window.amcRestore || null;
+  try { window.sessionStorage.removeItem("amc-restore"); } catch (e) { /* nothing saved */ }
+  setView(restored ? restored.view : "list");
+
+  function reloadHere() {
+    try {
+      window.sessionStorage.setItem("amc-restore", JSON.stringify({
+        url: window.location.href, view: view,
+        month: layout && layout.getAttribute("data-cal-month"),
+        selected: layout && layout.getAttribute("data-cal-selected")
+      }));
+    } catch (e) { /* private mode: reloads onto the list */ }
+    window.location.reload();
+  }
 
   // Theme (Impostazioni): auto follows the device; light/dark are stored per device.
   // base.html applies the stored choice before the stylesheet loads.
@@ -161,7 +176,7 @@
       showSnackbar(shown, function () {
         post("/" + reverse + "/" + encodeURIComponent(id)).then(function (undone) {
           if (!undone) { showSnackbar("Operazione non riuscita", null); }
-          else if (flagged) { window.location.reload(); }
+          else if (flagged) { reloadHere(); }
           else { parent.insertBefore(card, next); }
         });
       });
@@ -232,11 +247,11 @@
     document.getElementById("bell-cancel").addEventListener("click", function () { bell.close(); });
     document.getElementById("bell-save").addEventListener("click", function () {
       request("/alert/" + encodeURIComponent(bellId), { threshold: String(bellN) })
-        .then(function (r) { if (r.ok) { window.location.reload(); } else { bellFail(r); } });
+        .then(function (r) { if (r.ok) { reloadHere(); } else { bellFail(r); } });
     });
     document.getElementById("bell-remove").addEventListener("click", function () {
       request("/alert/" + encodeURIComponent(bellId) + "/delete")
-        .then(function (r) { if (r.ok) { window.location.reload(); } else { bellFail(r); } });
+        .then(function (r) { if (r.ok) { reloadHere(); } else { bellFail(r); } });
     });
   }
 
@@ -250,7 +265,7 @@
     else if (action === "bell") { bellOpen(btn); }
     else if (action === "pin" || action === "unpin") {
       post("/" + action + "/" + encodeURIComponent(id)).then(function (ok) {
-        if (ok) { window.location.reload(); }
+        if (ok) { reloadHere(); }
         else { showSnackbar("Operazione non riuscita", null); }
       });
     }

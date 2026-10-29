@@ -24,7 +24,10 @@ def main(argv: list[str]) -> int:
     now = datetime.now(timezone.utc)
     if argv[0] == "crawl":
         with source.make_client() as client:
-            snap = crawl.run_crawl(store, client, now)
+            snap = crawl.crawl_and_alert(store, client, SmtpMailer.from_config(cfg), cfg, now)
+        if snap is None:
+            print("crawl skipped: another is running", file=sys.stderr)
+            return 1
         if not snap.ok:
             print(f"crawl failed: {snap.error}", file=sys.stderr)
             return 1

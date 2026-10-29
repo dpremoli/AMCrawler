@@ -71,6 +71,7 @@ def test_gone_sends_the_last_seen_data_and_ends_the_alert(store):
     _alert(store, threshold=8)
     mailer = FakeMailer()
     _run(store, mailer, [dep(id="other")])
+    _run(store, mailer, [dep(id="other")])
     assert [m[1] for m in mailer.sent] == [
         "AMCrawler: Patagonia Trek non è più nell'elenco"]
     assert "5/14 iscritti" in mailer.sent[0][2]
@@ -79,10 +80,67 @@ def test_gone_sends_the_last_seen_data_and_ends_the_alert(store):
 
 def test_gone_mail_failure_keeps_the_alert(store, caplog):
     _alert(store, threshold=8)
+    _run(store, FakeMailer(), [dep(id="other")])
     with caplog.at_level(logging.ERROR, logger="amcrawler"):
         _run(store, FakeMailer(fail=True), [dep(id="other")])
-    assert len(store.alerts()) == 1
+    a = store.alerts()
+    assert len(a) == 1 and a[0].threshold == 8 and a[0].misses == 1
     assert any(r.exc_info for r in caplog.records)
+
+
+def test_one_miss_is_not_gone(store):
+    _alert(store, threshold=8)
+    mailer = FakeMailer()
+    _run(store, mailer, [dep(id="other")])
+    assert mailer.sent == [] and store.alerts()[0].misses == 1
+
+
+def test_seeing_the_departure_again_resets_the_miss(store):
+    _alert(store, threshold=8)
+    mailer = FakeMailer()
+    _run(store, mailer, [dep(id="other")])
+    _run(store, mailer, [dep(id="d1", name="Patagonia Trek", participants=6)])
+    assert store.alerts()[0].misses == 0
+    _run(store, mailer, [dep(id="other")])
+    assert mailer.sent == [] and len(store.alerts()) == 1  # a fresh first miss
+
+
+def test_an_empty_snapshot_neither_counts_nor_resets_a_miss(store):
+    _alert(store, threshold=8)
+    mailer = FakeMailer()
+    _run(store, mailer, [dep(id="other")])
+    _run(store, mailer, [])
+    assert store.alerts()[0].misses == 1
+    _run(store, mailer, [dep(id="other")])
+    assert len(mailer.sent) == 1
+
+
+def test_two_runs_at_once_send_one_mail(store):
+    import threading
+    import time
+
+    _alert(store, threshold=8)
+    sent = []
+
+    class Slow:
+        def send(self, subject, text, html=None):
+            time.sleep(0.5)  # the SMTP round trip
+            sent.append(subject)
+
+    reached = [dep(id="d1", participants=8)]
+    threads = [threading.Thread(target=run_alerts, args=(store, Slow(), CFG, NOW, reached))
+               for _ in range(2)]
+    [t.start() for t in threads]
+    [t.join() for t in threads]
+    assert len(sent) == 1 and store.alerts() == []
+
+
+def test_failed_send_restores_the_alert_untouched(store):
+    _alert(store, threshold=8)
+    _run(store, FakeMailer(fail=True), [dep(id="d1", participants=9)])
+    a = store.alerts()
+    assert len(a) == 1 and (a[0].threshold, a[0].name, a[0].participants) == (
+        8, "Patagonia Trek", 5)
 
 
 def test_empty_snapshot_does_nothing(store):
@@ -103,6 +161,7 @@ def test_departed_alert_is_dropped_silently(store):
 def test_departure_leaving_tomorrow_is_still_reported_gone(store):
     store.set_alert(dep(id="d1", name="Domani", start_date=TODAY + timedelta(days=1)), 8, NOW)
     mailer = FakeMailer()
+    _run(store, mailer, [dep(id="other")])
     _run(store, mailer, [dep(id="other")])
     assert len(mailer.sent) == 1 and store.alerts() == []
 

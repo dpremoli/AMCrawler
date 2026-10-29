@@ -13,9 +13,11 @@ from .store import Store
 
 logger = logging.getLogger("amcrawler")
 
+GONE_AFTER_MISSES = 2  # accepted crawls in a row without the Departure before "gone" is sent
+
 
 def _send(mailer, subject: str, html: str, text: str) -> bool:
-    """Send one Alert mail; False (logged) when it did not go out, so the Alert stays."""
+    """Send one Alert mail; False (logged) when it did not go out."""
     try:
         mailer.send(subject, text, html)
     except MailerNotConfigured as exc:
@@ -30,7 +32,8 @@ def _send(mailer, subject: str, html: str, text: str) -> bool:
 def run_alerts(store: Store, mailer, cfg: Config, now: datetime,
                departures: list[Departure]) -> None:
     """`departures` are those of the snapshot just accepted as OK. Alerts go out whatever the
-    Digest pause or weekdays say; a failed mail keeps its Alert for the next crawl."""
+    Digest pause or weekdays say. An Alert is claimed (deleted) before its mail is sent and
+    put back when the mail fails, so it is retried after the next accepted crawl."""
     today = today_in(cfg.tz, now)
     store.delete_pins_before(today)
     current = {d.id: d for d in departures}
@@ -46,7 +49,12 @@ def run_alerts(store: Store, mailer, cfg: Config, now: datetime,
         elif alert.start_date <= today:
             store.delete_alert(alert.departure_id)  # it has departed
             continue
+        elif alert.misses + 1 < GONE_AFTER_MISSES:
+            store.note_alert_miss(alert.departure_id)  # one crawl may just have skipped it
+            continue
         else:
             subject, html, text = render_alert_gone(alert, cfg.public_url)
-        if _send(mailer, subject, html, text):
-            store.delete_alert(alert.departure_id)
+        if not store.claim_alert(alert.departure_id, alert.threshold):
+            continue  # another crawl is sending it, or the Owner changed it
+        if not _send(mailer, subject, html, text):
+            store.restore_alert(alert, now)

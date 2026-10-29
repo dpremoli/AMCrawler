@@ -53,7 +53,7 @@ def _alert_error(threshold: str | None, d: Departure) -> str | None:
     """Why `threshold` is not a valid Alert number for `d`, in Italian; None when it is."""
     if threshold is None or not (threshold.isascii() and threshold.isdigit()):
         return "Numero di iscritti non valido."
-    n = int(threshold)
+    n = int(threshold) if len(threshold) <= 4 else MAX_ALERT + 1  # int() of 5000 digits raises
     if n <= d.participants:
         return ("Scegli un numero maggiore di "
                 f"{plural_it(d.participants, 'iscritto', 'iscritti')}.")

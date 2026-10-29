@@ -408,3 +408,29 @@ def test_a_non_suspicious_failure_does_not_count(store):
     respx.get(TOURS).mock(return_value=httpx.Response(503))
     run_crawl(store, make_client(), CRAWL_NOW + timedelta(hours=3), pause=0)
     assert not _crawl_n(store, 10, CRAWL_NOW + timedelta(hours=6)).ok
+
+
+def test_crawl_and_alert_skips_when_a_crawl_is_running(store, monkeypatch):
+    import threading
+    import time
+
+    from amcrawler import crawl
+    from amcrawler.config import load_config
+    from tests.conftest import FakeMailer
+
+    calls = []
+
+    def slow_crawl(store, client, now):
+        calls.append(1)
+        time.sleep(0.4)
+        store.record_snapshot(now, [])
+        return store.latest_snapshot()
+
+    monkeypatch.setattr(crawl, "run_crawl", slow_crawl)
+    results = []
+    threads = [threading.Thread(target=lambda: results.append(
+        crawl.crawl_and_alert(store, None, FakeMailer(), load_config({}), CRAWL_NOW)))
+        for _ in range(2)]
+    [t.start() for t in threads]
+    [t.join() for t in threads]
+    assert len(calls) == 1 and results.count(None) == 1

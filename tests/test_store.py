@@ -282,3 +282,39 @@ def test_hiding_removes_the_pin_and_the_alert(store):
     assert store.pinned_ids() == {"d2"} and store.alerts() == []
     store.unhide("d1")  # Annulla does not bring them back
     assert store.pinned_ids() == {"d2"} and store.alerts() == []
+
+
+def test_alert_misses_count_reset_and_survive_a_restore(store):
+    store.set_alert(dep(id="d1"), 7, STORE_NOW)
+    assert store.alerts()[0].misses == 0
+    assert store.note_alert_miss("d1") == 1 and store.note_alert_miss("d1") == 2
+    a = store.alerts()[0]
+    assert store.claim_alert("d1", 7) and store.alerts() == []
+    store.restore_alert(a, STORE_NOW)
+    assert store.alerts()[0].misses == 2
+    store.refresh_alert(dep(id="d1"))
+    assert store.alerts()[0].misses == 0
+
+
+def test_claim_alert_succeeds_once_and_only_for_the_same_threshold(store):
+    store.set_alert(dep(id="d1"), 7, STORE_NOW)
+    assert not store.claim_alert("d1", 9)  # replaced meanwhile by another number
+    assert store.claim_alert("d1", 7)
+    assert not store.claim_alert("d1", 7)
+
+
+def test_init_adds_the_misses_column_to_an_older_alerts_table(tmp_path):
+    import sqlite3
+    from contextlib import closing
+
+    path = str(tmp_path / "old.db")
+    with closing(sqlite3.connect(path)) as conn:
+        conn.execute("CREATE TABLE alerts(departure_id TEXT PRIMARY KEY, threshold INTEGER, "
+                     "name TEXT, itinerary_code TEXT, start_date TEXT, end_date TEXT, "
+                     "participants INTEGER, max_participants INTEGER, created_at TEXT)")
+        conn.execute("INSERT INTO alerts VALUES ('d1', 7, 'N', '0001', '2026-12-01', "
+                     "'2026-12-05', 3, 10, 'x')")
+        conn.commit()
+    s = Store(path)
+    s.init()
+    assert s.alerts()[0].misses == 0

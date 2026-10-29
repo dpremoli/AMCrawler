@@ -62,7 +62,7 @@
       <summary><svg class="chev" width="16" height="16" aria-hidden="true"><use href="#i-chev"/></svg>Fissati <span class="count">({{ pinned_results | length }})</span></summary>
       {% for d in pinned_results %}
       <div class="prow">
-        <button type="button" class="prow-btn" aria-expanded="false"><span class="nm">{{ d.name }}<span class="dt">{{ arrow_range(d.start_date, d.end_date) }}</span></span><span class="px">{{ d.participants }}{% if d.max_participants > 0 %}/{{ d.max_participants }}{% endif %}</span><span class="bell-mini">{% if d.id in alerts %}<svg aria-hidden="true"><use href="#i-bell-on"/></svg>{{ alerts[d.id] }}{% endif %}</span></button>
+        <button type="button" class="prow-btn" aria-expanded="false"><span class="nm">{{ d.name }}<span class="dt">{{ arrow_range(d.start_date, d.end_date) }}</span></span><span class="px">{{ d.participants }}{% if d.max_participants > 0 %}/{{ d.max_participants }}{% endif %}</span><span class="bell-mini"{% if d.id in alerts %} role="img" aria-label="avviso a {{ alerts[d.id] }} iscritti"{% endif %}>{% if d.id in alerts %}<svg aria-hidden="true"><use href="#i-bell-on"/></svg>{{ alerts[d.id] }}{% endif %}</span></button>
         <div class="open-card" hidden>
           {% include "_card.html" %}
         </div>
